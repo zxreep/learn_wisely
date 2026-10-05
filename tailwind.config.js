@@ -29,6 +29,8 @@ export default {
         card: '0 1px 2px rgb(var(--c-ink) / 0.05), 0 1px 8px rgb(var(--c-ink) / 0.05)',
         pop: '0 8px 30px rgb(var(--c-ink) / 0.16)',
         lift: '0 4px 14px rgb(var(--c-ink) / 0.10)',
+        'glass-sm': 'inset 0 1px 0 rgb(255 255 255 / 0.35), 0 4px 14px -6px rgb(var(--c-ink) / 0.15)',
+        glass: 'inset 0 1px 0 rgb(255 255 255 / 0.5), 0 10px 28px -14px rgb(var(--c-ink) / 0.18)',
       },
       keyframes: {
         'fade-up': {

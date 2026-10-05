@@ -27,7 +27,7 @@ export function Toasts() {
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 40, scale: 0.95 }}
               transition={{ type: 'spring', damping: 26, stiffness: 350 }}
-              className="pointer-events-auto flex items-start gap-3 rounded-2xl border border-line bg-surface/95 backdrop-blur px-3.5 py-3 shadow-pop"
+              className="pointer-events-auto flex items-start gap-3 rounded-2xl glass-strong px-3.5 py-3"
             >
               <div className={cn('grid place-items-center w-8 h-8 rounded-xl shrink-0', classes)}>
                 <Icon className="w-4 h-4" />

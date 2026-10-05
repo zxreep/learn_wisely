@@ -1,62 +1,84 @@
-# Wisely — a local-first digital study workspace
+# Wisely — a local-first digital study workspace (Cloudflare + MongoDB + Groq)
 
-Wisely is a cohesive study home for students: customizable **study boards**, a **library** with
-integrated on-device **AI**, a **Focus Mode** timer, **gamified progress** (XP, streaks, badges,
-quests), a **Discover** catalog of shared content, **communities & study rooms** — all local-first,
-so everything keeps working offline and syncs when you reconnect.
+Wisely is a cohesive study home for students: customizable **study boards**, a **library** with an
+**AI assistant** (Groq in the cloud, on-device NLP offline), a **Focus Mode** timer, **gamified
+progress** (XP, streaks, badges, quests), a **Discover** catalog — and a **real social layer**:
+accounts, cloud sync, communities, co-working room chat, live presence and a weekly XP leaderboard.
 
-Built with **Vite + React 18 + TypeScript**, **Tailwind CSS** (design-token theming),
-**Zustand** with `persist` for local-first state, **React Router**, **Framer Motion** and
-**Lucide** icons. No backend required.
+Everything is local-first: your workspace lives in the browser's localStorage and keeps working
+offline; sign in once and it syncs to your account on every device. **Nothing social is simulated** —
+every community member, chat line and leaderboard row is a real signed-up user stored in MongoDB.
+
+> 🧠 Agents: read **MEMORY.md** for the full architecture, verification suites and gotchas.
+
+## Stack
+
+- **Client** — Vite + React 18 + TypeScript, Tailwind (liquid-glass design system), Zustand with
+  `persist`, React Router, Framer Motion, Lucide.
+- **Backend** — Cloudflare **Workers** (Hono) with `nodejs_compat`: PBKDF2 auth + opaque sessions,
+  workspace sync (LWW), communities/memberships, room chat, presence heartbeat, leaderboard,
+  Groq AI proxy. The same deploy also serves the SPA via Workers Static Assets.
+- **Database** — **MongoDB Atlas M0** (official Node driver over Workers outbound TCP/TLS),
+  behind a `Storage` interface with an in-memory reference impl used by tests.
+- **AI** — **Groq** `llama-3.3-70b-versatile` server-side (key never touches the client).
+  Automatic fallback to an on-device extractive engine so the AI drawer keeps working offline.
 
 ## Quick start
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # type-checks, then bundles to dist/
-npm run preview    # serve the production build
+npm run dev                    # http://localhost:5173 (Vite)
+
+# optional: run the API locally (proxied from /api on 5173)
+cp .dev.vars.example .dev.vars # fill MONGODB_URI + GROQ_API_KEY
+npm run worker:dev             # http://localhost:8787
+
+npm run build                  # typechecks app+worker, bundles to dist/
+npm run deploy                 # npm run build && wrangler deploy (Cloudflare)
 ```
+
+Secrets are provisioned with `wrangler secret put MONGODB_URI` / `wrangler secret put GROQ_API_KEY`
+(never committed). See MEMORY.md §4 for the full environment inventory and schema.
 
 ## Feature map
 
 | Area | What you get |
 | --- | --- |
-| **Dashboard** | Daily-goal ring, streak, due flashcards, today's quests, week chart, "Ask Wisely" shortcuts, jump-back-in lists |
-| **Study boards** | Unlimited kanban boards: drag & drop cards, columns CRUD, due dates, priorities, tags, linked notes, done = XP |
-| **Library** | Folders, markdown-lite notes with autosave editor + preview, file shelf (small files stored offline), flashcard decks |
-| **On-device AI** | Summarize notes, generate flashcards (definition/date/cloze extraction), multiple-choice quizzes, "explain" and "ask" over your own library — zero network calls, works on a plane |
-| **Flashcards** | Spaced repetition (SM-2 lite): Again/Hard/Good/Easy rescheduling, due queues, deck mastery %, keyboard study (Space, 1–4) |
-| **Focus Mode** | Pomodoro / deep-work / sprint / custom timer with breaks & cycles, deadline-based engine that survives navigation and reloads, generated ambient soundscapes (rain, brown noise, forest), zen overlay |
-| **Progress** | XP & levels, streak (current/longest), 14 badges, daily + weekly quests, activity heatmap, 7-day charts, XP feed |
-| **Discover** | Starter boards, shared decks (real card content) and note packs you clone into your workspace |
-| **Communities** | Join/leave circles with activity feeds, study rooms with live presence and chat, weekly XP leaderboard with your real stats |
-| **Offline & sync** | `navigator.onLine` tracking, offline banner, queued-change counter, debounced simulated sync, manual "Sync now", backup export/import (JSON) |
+| **Dashboard** | Daily-goal ring, streak, due flashcards, quests, week chart, "Ask Wisely" shortcuts |
+| **Study boards** | Unlimited kanban: drag & drop, columns CRUD, due dates, priorities, tags, linked notes |
+| **Library** | Folders, markdown-lite notes with autosave + preview, file shelf, flashcard decks |
+| **AI drawer** | Summarize, flashcard generation, quiz, explain, ask — Groq when online (grounded in just the matching notes), private on-device engine as fallback, with an engine badge per answer |
+| **Flashcards** | Spaced repetition (SM-2 lite), due queues, deck mastery |
+| **Focus Mode** | Pomodoro / deep-work / sprint / custom, deadline-based engine that survives navigation, generated soundscapes, zen overlay, announce-your-focus in a room |
+| **Progress** | XP & levels, streaks, badges, daily + weekly quests, heatmap, XP feed |
+| **Communities** | Real server records — join/leave, live activity feed of real members |
+| **Study rooms** | Real chat (4s polling), live presence (~90s TTL), "Focus in this room" announces your timer |
+| **Leaderboard** | Weekly XP computed server-side from synced workspaces |
+| **Offline & sync** | Offline banner, queued-change counter, debounced push, 60s pulls, conflict toast, backup export/import |
 
-## Local-first architecture
+## Tests
 
-Every write lands in `localStorage` instantly via Zustand `persist` ("wisely-*" keys). The sync
-engine keeps a pending-changes queue that drains when online — the same contract a future
-multi-device backend will satisfy. The focus timer is deadline-based (`endAt` timestamps), so it
-stays accurate in background tabs and across navigation.
-
-The AI assistant (`src/lib/ai.ts`) is fully local extractive NLP: term-frequency scoring,
-definition-pattern detection and cloze deletion over your notes. That is a deliberate product
-choice — a student's notes never leave the device.
+```bash
+TSX_TSCONFIG_PATH=$PWD/tsconfig.app.json npx tsx tests/logic.mts    # domain logic
+TSX_TSCONFIG_PATH=$PWD/tsconfig.app.json npx tsx tests/api.mts      # API e2e (hono + memory DB)
+TSX_TSCONFIG_PATH=$PWD/tsconfig.app.json npx tsx tests/groq.mts     # Groq adapter
+TSX_TSCONFIG_PATH=$PWD/tsconfig.app.json npx tsx tests/render.mts   # SSR smoke + full client e2e against the real in-process API
+TSX_TSCONFIG_PATH=$PWD/tsconfig.app.json npx tsx tests/timer.mts    # focus engine
+```
 
 ## Project layout
 
 ```
-src/
-  components/   layout shell, UI primitives, charts, command palette, AI drawer, quiz runner
-  hooks/        useAmbient (WebAudio soundscapes)
-  lib/          utils, dates, on-device AI engine, templates, seed data, audio chimes
-  pages/        Dashboard, Boards, BoardDetail, Library, FocusPage, Progress, Discover, Community, Settings
-  stores/       zustand stores: settings, sync, progress (gamification), library, boards, focus, community, ui, toast
+src/            # client app (pages, components, stores, lib)
+worker/         # Cloudflare Worker API (hono) + Mongo storage + Groq proxy
+shared/         # shared API contracts imported by both sides
+tests/          # tsx verification suites (logic / api / groq / render / timer)
+skills/         # vendor agent skills (reference only — never deployed)
+wrangler.jsonc  # single full-stack deploy: API + SPA assets
+MEMORY.md       # agent handoff memory (architecture, gotchas, roadmap)
 ```
 
 ## Notes for deploys
 
-Publish only `dist/` (see `INSTRUCTIONS.md`). Ready-made configs included for Cloudflare
-(`wrangler.jsonc`), Netlify (`netlify.toml`), Vercel (`vercel.json` + `.vercelignore`) and
-Docker (`.dockerignore`) — all excluding the reference-only `skills/` folder.
+Deploy only `dist/` + the worker bundle through `wrangler deploy` — never the repo root. The
+`skills/` folder is planning reference and stays out of any public output (see INSTRUCTIONS.md).

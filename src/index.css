@@ -49,10 +49,127 @@ html {
 
 body {
   @apply bg-bg text-ink font-sans;
+  /* Mesh of soft aurora blobs behind everything — the glass layers refraction
+     targets (liquid-glass principle: glass needs colorful content behind it). */
   background-image:
-    radial-gradient(1200px 500px at 80% -10%, rgb(var(--c-accent) / 0.05), transparent 60%),
-    radial-gradient(900px 400px at -10% 110%, rgb(var(--c-accent2) / 0.05), transparent 60%);
+    radial-gradient(1400px 800px at 85% -15%, rgb(var(--c-accent) / 0.14), transparent 55%),
+    radial-gradient(1100px 700px at -12% 25%, rgb(var(--c-accent2) / 0.11), transparent 55%),
+    radial-gradient(900px 640px at 45% 115%, rgb(var(--c-violet) / 0.11), transparent 55%);
   background-attachment: fixed;
+}
+
+.dark body {
+  background-image:
+    radial-gradient(1400px 800px at 85% -15%, rgb(var(--c-accent) / 0.12), transparent 55%),
+    radial-gradient(1100px 700px at -12% 25%, rgb(var(--c-accent2) / 0.09), transparent 55%),
+    radial-gradient(900px 640px at 45% 115%, rgb(var(--c-violet) / 0.13), transparent 55%);
+}
+
+/* ---------------------------------------------------------------------------
+ * Liquid glass material — three tiers, translated from the
+ * skills/liquid-glass-design principles to the web:
+ *  - translucent blurred material over visible background content
+ *  - specular edge highlight (inset top hairline) + soft drop shadow
+ *  - reserved for chrome: nav, cards, modals, chips, controls
+ * ------------------------------------------------------------------------- */
+@layer components {
+  .glass {
+    background-color: rgb(var(--c-surface) / 0.55);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    backdrop-filter: blur(18px) saturate(1.6);
+    border: 1px solid rgb(255 255 255 / 0.5);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      0 10px 28px -14px rgb(var(--c-ink) / 0.18);
+  }
+  .dark .glass {
+    background-color: rgb(var(--c-surface) / 0.6);
+    border: 1px solid rgb(255 255 255 / 0.09);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.07),
+      0 12px 30px -14px rgb(0 0 0 / 0.65);
+  }
+
+  .glass-strong {
+    background-color: rgb(var(--c-surface) / 0.72);
+    -webkit-backdrop-filter: blur(28px) saturate(1.7);
+    backdrop-filter: blur(28px) saturate(1.7);
+    border: 1px solid rgb(255 255 255 / 0.55);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.6),
+      0 18px 48px -18px rgb(var(--c-ink) / 0.28);
+  }
+  .dark .glass-strong {
+    background-color: rgb(var(--c-surface) / 0.78);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 20px 50px -18px rgb(0 0 0 / 0.7);
+  }
+
+  .glass-subtle {
+    background-color: rgb(var(--c-surface) / 0.42);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    backdrop-filter: blur(12px) saturate(1.4);
+    border: 1px solid rgb(255 255 255 / 0.4);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4);
+  }
+  .dark .glass-subtle {
+    background-color: rgb(var(--c-surface) / 0.5);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+
+  .glass-input {
+    background-color: rgb(var(--c-surface) / 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .dark .glass-input {
+    background-color: rgb(var(--c-bg) / 0.45);
+  }
+
+  /* Tinted glass tile (icon chips etc.) — set --tint to a hex color */
+  .glass-tint {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(var(--c-surface) / 0.5);
+    border: 1px solid rgb(255 255 255 / 0.45);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45);
+  }
+  .glass-tint::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--tint, #2f6b4f) 18%, transparent), transparent 70%);
+    pointer-events: none;
+  }
+  .dark .glass-tint {
+    background-color: rgb(var(--c-surface) / 0.55);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+}
+
+/* Graceful degradation: no backdrop-filter → opaque surfaces, design intact */
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .glass,
+  .glass-strong,
+  .glass-subtle,
+  .glass-input,
+  .glass-tint {
+    background-color: rgb(var(--c-surface));
+    box-shadow: 0 1px 2px rgb(var(--c-ink) / 0.06), 0 8px 24px -12px rgb(var(--c-ink) / 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 /* Selection + focus */

@@ -20,7 +20,7 @@ export default function Discover() {
     <Page>
       <PageHeader
         title="Discover"
-        subtitle="Shared starter content from other students. One click clones it into your workspace — then it's fully yours, editable and offline."
+        subtitle="Curated study starter packs. One click clones one into your workspace — then it’s fully yours, editable and offline."
       />
       <Tabs
         options={[

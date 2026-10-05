@@ -57,7 +57,7 @@ export function CommandPalette() {
       { id: 'a-board', label: 'New board', icon: KanbanSquare, group: 'Actions', hint: 'Create', run: () => { const id = useBoards.getState().createBoard('Untitled board'); navigate(`/boards/${id}`) } },
       { id: 'a-deck', label: 'New flashcard deck', icon: Layers, group: 'Actions', hint: 'Create', run: () => { useLibrary.getState().createDeck('New deck'); navigate('/library?tab=decks') } },
       { id: 'a-focus', label: 'Start a focus session', icon: Timer, group: 'Actions', hint: 'Go to Focus mode', run: () => navigate('/focus') },
-      { id: 'a-ai', label: 'Ask Wisely', icon: Sparkles, group: 'Actions', hint: 'AI · works offline', run: () => openAi('ask') },
+      { id: 'a-ai', label: 'Ask Wisely', icon: Sparkles, group: 'Actions', hint: 'Groq when online, on-device otherwise', run: () => openAi('ask') },
       { id: 'a-theme', label: theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme', icon: theme === 'dark' ? Sun : Moon, group: 'Actions', hint: 'Appearance', run: () => setTheme(theme === 'dark' ? 'light' : 'dark') },
       ...notes.map((n) => ({
         id: 'n-' + n.id, label: n.title, hint: 'Note', icon: FileText, group: 'Notes',
@@ -104,7 +104,7 @@ export function CommandPalette() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-            className="relative w-full max-w-xl bg-surface border border-line rounded-2xl shadow-pop overflow-hidden"
+            className="relative w-full max-w-xl glass-strong rounded-2xl overflow-hidden"
             role="dialog"
             aria-label="Command palette"
           >

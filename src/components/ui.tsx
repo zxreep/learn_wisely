@@ -21,8 +21,8 @@ export function Button({
         variant === 'primary' && 'bg-accent text-surface hover:brightness-110 shadow-sm',
         variant === 'accent2' && 'bg-accent2 text-surface hover:brightness-110 shadow-sm',
         variant === 'ghost' && 'hover:bg-surface2 text-ink2 hover:text-ink',
-        variant === 'subtle' && 'bg-surface2 hover:bg-surface3 text-ink border border-line/60',
-        variant === 'outline' && 'border border-line hover:bg-surface2 text-ink',
+        variant === 'subtle' && 'glass-subtle hover:brightness-105 text-ink',
+        variant === 'outline' && 'glass-subtle hover:brightness-105 text-ink',
         variant === 'danger' && 'bg-danger/10 text-danger hover:bg-danger/20 border border-danger/25',
         className,
       )}
@@ -35,7 +35,7 @@ export function Button({
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('bg-surface border border-line/70 rounded-2xl shadow-card', className)}
+      className={cn('glass rounded-2xl', className)}
       {...props}
     />
   )
@@ -103,7 +103,7 @@ export function Modal({
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
             transition={{ type: 'spring', damping: 26, stiffness: 320 }}
             className={cn(
-              'relative w-full bg-surface border border-line rounded-3xl shadow-pop overflow-hidden outline-none',
+              'relative w-full glass-strong rounded-3xl overflow-hidden outline-none',
               wide ? 'max-w-3xl' : 'max-w-lg',
               tall && 'max-h-[86vh] flex flex-col',
             )}
@@ -128,7 +128,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cn(
-        'h-[38px] w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink3',
+        'h-[38px] w-full rounded-xl border border-line/70 glass-input px-3 text-sm text-ink placeholder:text-ink3',
         'focus:border-accent/60 focus:ring-2 focus:ring-accent/15 outline-none transition-shadow',
         className,
       )}
@@ -141,7 +141,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return (
     <textarea
       className={cn(
-        'w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-ink3',
+        'w-full rounded-xl border border-line/70 glass-input px-3 py-2.5 text-sm text-ink placeholder:text-ink3',
         'focus:border-accent/60 focus:ring-2 focus:ring-accent/15 outline-none transition-shadow resize-y min-h-[80px]',
         className,
       )}
@@ -154,7 +154,7 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
   return (
     <select
       className={cn(
-        'h-[38px] rounded-xl border border-line bg-surface px-2.5 text-sm text-ink',
+        'h-[38px] rounded-xl border border-line/70 glass-input px-2.5 text-sm text-ink',
         'focus:border-accent/60 outline-none',
         className,
       )}
@@ -232,7 +232,7 @@ export function Tabs<T extends string>({
   options, value, onChange, className,
 }: { options: { value: T; label: ReactNode }[]; value: T; onChange: (v: T) => void; className?: string }) {
   return (
-    <div className={cn('inline-flex items-center gap-0.5 rounded-xl bg-surface2 border border-line/60 p-1', className)}>
+    <div className={cn('inline-flex items-center gap-0.5 rounded-xl glass-subtle p-1', className)}>
       {options.map((o) => (
         <button
           key={o.value}

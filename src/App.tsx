@@ -4,7 +4,8 @@ import { AppLayout } from './components/Layout'
 import { CommandPalette } from './components/CommandPalette'
 import { AiDrawer } from './components/AiDrawer'
 import { Toasts } from './components/Toasts'
-import { useSync } from './stores/sync'
+import AuthModal from './components/AuthModal'
+import { bootstrapSync, useSync } from './stores/sync'
 import { useProgress } from './stores/progress'
 import { useFocus } from './stores/focus'
 import Dashboard from './pages/Dashboard'
@@ -23,17 +24,9 @@ export default function App() {
   const setOnline = useSync((s) => s.setOnline)
   const ensureQuests = useProgress((s) => s.ensureQuests)
 
-  // connectivity listeners (offline-first behavior)
+  // connectivity + real sync bootstrap (auth resume, periodic pulls, visibility refresh)
   useEffect(() => {
-    const on = () => setOnline(true)
-    const off = () => setOnline(false)
-    window.addEventListener('online', on)
-    window.addEventListener('offline', off)
-    setOnline(navigator.onLine)
-    return () => {
-      window.removeEventListener('online', on)
-      window.removeEventListener('offline', off)
-    }
+    bootstrapSync()
   }, [setOnline])
 
   // quests: generate today's + keep fresh across midnight
@@ -77,6 +70,7 @@ export default function App() {
       </AppLayout>
       <CommandPalette />
       <AiDrawer />
+      <AuthModal />
       <Toasts />
     </BrowserRouter>
   )

@@ -10,6 +10,7 @@ import { useSettings } from '../stores/settings'
 import { useSync } from '../stores/sync'
 import { useProgress } from '../stores/progress'
 import { useUi } from '../stores/ui'
+import { useAuth } from '../stores/auth'
 import { allDue, useLibrary } from '../stores/library'
 import { OwlMark } from './icons'
 import { Avatar } from './ui'
@@ -51,42 +52,63 @@ function ThemeToggle() {
 }
 
 export function SyncChip() {
-  const { online, pending, syncing, lastSyncedAt, syncNow } = useSync()
+  const { online, pending, status, lastSyncedAt, syncNow } = useSync()
+  const user = useAuth((s) => s.user)
+  const openAuth = useUi((s) => s.openAuth)
+
+  if (!user) {
+    return (
+      <button
+        onClick={() => openAuth('Sign in to sync your workspace across devices.')}
+        title="Everything lives on this device only. Sign in to sync."
+        className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-medium glass-subtle text-ink3 hover:text-ink2 transition-colors"
+      >
+        <CloudOff className="w-3.5 h-3.5" />
+        Local only
+      </button>
+    )
+  }
+
+  const styles = cn(
+    'hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-medium transition-colors',
+    !online
+      ? 'glass-subtle text-warn'
+      : status === 'syncing'
+        ? 'glass-subtle text-accent2'
+        : 'glass-subtle text-ink3 hover:text-ink2',
+  )
   return (
     <button
       onClick={() => void syncNow()}
       title={
         !online
           ? 'You are offline. Changes are stored locally and will sync when you reconnect.'
-          : syncing
+          : status === 'syncing'
             ? 'Syncing changes…'
-            : `Synced ${lastSyncedAt ? timeAgo(lastSyncedAt) : 'just now'}`
+            : pending > 0
+              ? `${pending} change${pending === 1 ? '' : 's'} waiting to sync`
+              : `Synced ${lastSyncedAt ? timeAgo(lastSyncedAt) : 'just now'}`
       }
-      className={cn(
-        'hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-medium border transition-colors',
-        !online
-          ? 'border-warn/40 bg-warn/10 text-warn'
-          : syncing
-            ? 'border-accent2/40 bg-accent2/10 text-accent2'
-            : 'border-line bg-surface text-ink3 hover:text-ink2 hover:bg-surface2',
-      )}
+      className={styles}
     >
       {!online ? (
         <WifiOff className="w-3.5 h-3.5" />
-      ) : syncing ? (
+      ) : status === 'syncing' ? (
         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
       ) : pending > 0 ? (
         <CloudOff className="w-3.5 h-3.5" />
       ) : (
         <Cloud className="w-3.5 h-3.5 text-ok" />
       )}
-      {!online ? `Offline${pending > 0 ? ` · ${pending}` : ''}` : syncing ? 'Syncing…' : pending > 0 ? `${pending} to sync` : 'Synced'}
+      {!online ? `Offline${pending > 0 ? ` · ${pending}` : ''}` : status === 'syncing' ? 'Syncing…' : status === 'conflict' ? 'Resolving…' : pending > 0 ? `${pending} to sync` : 'Synced'}
     </button>
   )
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { name } = useSettings()
+  const user = useAuth((s) => s.user)
+  const openAuth = useUi((s) => s.openAuth)
   const streak = useProgress((s) => s.streak)
   const navigate = useNavigate()
   return (
@@ -124,7 +146,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                       {isActive && (
                         <motion.span
                           layoutId="nav-pill"
-                          className="absolute inset-0 bg-surface border border-line/70 rounded-xl shadow-card"
+                          className="absolute inset-0 glass rounded-xl"
                           transition={{ type: 'spring', damping: 30, stiffness: 380 }}
                         />
                       )}
@@ -155,14 +177,24 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         </button>
         <div className="flex items-center gap-1 px-1.5">
-          <Link
-            to="/settings"
-            onClick={onNavigate}
-            className="flex items-center gap-2 flex-1 min-w-0 px-1.5 py-1.5 rounded-xl hover:bg-surface2 transition-colors"
-          >
-            <Avatar name={name} color="#2f6b4f" size={26} />
-            <span className="text-[13px] font-medium truncate">{name}</span>
-          </Link>
+          {user ? (
+            <Link
+              to="/settings"
+              onClick={onNavigate}
+              className="flex items-center gap-2 flex-1 min-w-0 px-1.5 py-1.5 rounded-xl hover:bg-surface2 transition-colors"
+            >
+              <Avatar name={user.name} color={user.color} size={26} />
+              <span className="text-[13px] font-medium truncate">{user.name}</span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => { onNavigate?.(); openAuth('Sign in to sync, join rooms and chat.') }}
+              className="flex items-center gap-2 flex-1 min-w-0 px-1.5 py-1.5 rounded-xl hover:bg-surface2 transition-colors"
+            >
+              <Avatar name={name} color="#7a7f85" size={26} />
+              <span className="text-[13px] font-medium truncate text-ink2">Guest — sign in</span>
+            </button>
+          )}
           <ThemeToggle />
           <Link
             to="/settings"
@@ -214,7 +246,7 @@ function Topbar() {
   const { online, pending } = useSync()
   const { setPaletteOpen, setSidebarOpen } = useUi()
   return (
-    <header className="sticky top-0 z-30 bg-bg/85 backdrop-blur-md border-b border-line/60">
+    <header className="sticky top-0 z-30 glass-strong border-x-0 border-t-0 border-b border-line/40">
       <div className="flex items-center gap-2 px-3 sm:px-6 h-14">
         <button
           onClick={() => setSidebarOpen(true)}
@@ -268,7 +300,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex">
       {/* desktop sidebar */}
-      <aside className="hidden lg:block w-[248px] shrink-0 border-r border-line/60 bg-surface/50 h-screen sticky top-0">
+      <aside className="hidden lg:block w-[248px] shrink-0 border-r border-white/10 bg-surface/40 backdrop-blur-2xl backdrop-saturate-150 h-screen sticky top-0">
         <SidebarContent />
       </aside>
 
@@ -282,7 +314,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setSidebarOpen(false)}
             />
             <motion.aside
-              className="fixed left-0 top-0 bottom-0 z-50 w-[270px] bg-surface border-r border-line lg:hidden"
+              className="fixed left-0 top-0 bottom-0 z-50 w-[270px] glass-strong border-y-0 border-l-0 border-r border-line/40 lg:hidden"
               initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 30, stiffness: 320 }}
             >

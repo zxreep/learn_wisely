@@ -102,7 +102,7 @@ export default function BoardDetail() {
             return (
               <section
                 key={col.id}
-                className="w-[280px] shrink-0 rounded-2xl bg-surface/60 border border-line/70 flex flex-col max-h-[calc(100vh-190px)]"
+                className="w-[280px] shrink-0 rounded-2xl glass flex flex-col max-h-[calc(100vh-190px)]"
                 onDragOver={(e) => {
                   e.preventDefault()
                   if (dropLoc?.columnId !== col.id) setDropLoc({ columnId: col.id, index: colCards.length })

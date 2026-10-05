@@ -7,7 +7,7 @@
 import { uid, mulberry32 } from './utils'
 import { addDays, todayKey } from './dates'
 import type {
-  Board, Community, DayLog, Deck, FileItem, Flashcard, Folder, LeaderboardEntry, Note, StudyRoom,
+  Board, DayLog, Deck, FileItem, Flashcard, Folder, Note,
 } from './types'
 
 export function seedLibrary() {
@@ -301,91 +301,3 @@ export function seedActivity(): { log: Record<string, DayLog>; streak: { current
   xp += 340 // account level head-start
   return { log, streak: { current: 6, longest: 11, lastActive: today }, xp }
 }
-
-export function seedCommunities(): Community[] {
-  const now = Date.now()
-  const act = (who: string, what: string, hAgo: number) => ({ who, what, at: now - hAgo * 3600000 })
-  return [
-    {
-      id: 'com-bio', name: 'Bio Study Circle', description: 'Weekly topic threads, diagram swaps and past-paper walkthroughs for intro bio.', category: 'Science',
-      members: 2543, color: '#3f7d58', icon: 'flask', joined: true,
-      activity: [act('Maya R.', 'shared “Krebs cycle mnemonic” in #resources', 3), act('Leo T.', 'started a thread: “Photosynthesis vs respiration — how do you keep them straight?”', 7), act('Sana K.', 'uploaded 12 labeled cell diagrams', 26)],
-    },
-    {
-      id: 'com-grind', name: 'Exam Season Grind', description: 'Accountability check-ins, co-working sprints and memes. Mostly memes.', category: 'Motivation',
-      members: 8120, color: '#c2703e', icon: 'flame', joined: true,
-      activity: [act('Priya', 'hit a 21-day streak 🔥', 5), act('Marcus', 'finished organic chem past paper #4', 12)],
-    },
-    {
-      id: 'com-lang', name: 'Language Exchange', description: 'Practice partners, word-of-the-day and 15-minute call chains.', category: 'Languages',
-      members: 4811, color: '#5b7fb0', icon: 'languages', joined: false,
-      activity: [act('Ana', 'word of the day: “madrugar” — to get up early', 8)],
-    },
-    {
-      id: 'com-cs', name: 'CS Freshman Hub', description: 'Debugging help, project showcases and Big-O drills for first-years.', category: 'Computer Science',
-      members: 3289, color: '#96762f', icon: 'code', joined: false,
-      activity: [act('Dev', 'shared a recursion cheatsheet', 2), act('Riley', 'is hosting a code-review room tonight', 9)],
-    },
-    {
-      id: 'com-med', name: 'Pre-Med Track', description: 'MCAT schedules, anatomy decks and clinical volunteering leads.', category: 'Pre-med',
-      members: 1976, color: '#5d8a83', icon: 'heart', joined: false,
-      activity: [act('Jordan', 'posted a 6-month MCAT schedule template', 30)],
-    },
-    {
-      id: 'com-hist', name: 'History Buffs', description: 'Primary sources, historiography debates and “this day in history”.', category: 'Humanities',
-      members: 1204, color: '#a35d8a', icon: 'scroll', joined: false,
-      activity: [act('Camille', 'shared 1789 bread-price data from the archives', 14)],
-    },
-  ]
-}
-
-export function seedRooms(): StudyRoom[] {
-  const m = (name: string, color: string, subject: string, focusingMin: number, status: 'focusing' | 'break' | 'chatting' = 'focusing') =>
-    ({ id: uid('mem'), name, color, subject, focusingMin, status })
-  return [
-    {
-      id: 'room-library', name: 'Silent Library', vibe: 'Cameras off, timers on. Quiet co-focus.',
-      color: '#5d8a83', joined: true,
-      members: [
-        m('Yuki', '#5b7fb0', 'Organic chem', 18), m('Amara', '#a35d8a', 'Macroeconomics', 12),
-        m('Ben', '#3f7d58', 'Physics', 9), m('Sofia', '#c2703e', 'Art history', 23, 'break'),
-        m('Noah', '#96762f', 'Statistics', 6),
-      ],
-    },
-    {
-      id: 'room-pomo', name: 'Pomodoro Power Hour', vibe: 'Synchronised 25/5 sprints on the hour.',
-      color: '#c2703e', joined: false,
-      members: [
-        m('Lena', '#3f7d58', 'MCAT bio', 21), m('Tom', '#5d8a83', 'Linear algebra', 21),
-        m('Ivy', '#a35d8a', 'French lit', 17, 'break'), m('Raj', '#96762f', 'Data structures', 21),
-        m('Gus', '#5b7fb0', 'Chemistry', 21), m('Zoe', '#c2703e', 'Psychology', 21),
-      ],
-    },
-    {
-      id: 'room-night', name: 'Late Night Cram', vibe: 'Low-fi beats and looming deadlines.',
-      color: '#5b7fb0', joined: false,
-      members: [
-        m('Kai', '#5d8a83', 'Essay draft', 42), m('Mina', '#c2703e', 'Calculus', 37),
-        m('Omar', '#3f7d58', 'Biochem', 29),
-      ],
-    },
-    {
-      id: 'room-morning', name: 'Morning Pages Café', vibe: 'Journaling, planning and light reading.',
-      color: '#a35d8a', joined: false,
-      members: [
-        m('Elsa', '#5b7fb0', 'Journaling', 14, 'chatting'), m('Theo', '#96762f', 'Reading', 31),
-      ],
-    },
-  ]
-}
-
-export const LEADERBOARD_PEOPLE: LeaderboardEntry[] = [
-  { id: 'lb-1', name: 'Priya S.', color: '#c2703e', weeklyXp: 4120 },
-  { id: 'lb-2', name: 'Yuki M.', color: '#5b7fb0', weeklyXp: 3680 },
-  { id: 'lb-3', name: 'Marcus L.', color: '#3f7d58', weeklyXp: 3240 },
-  { id: 'lb-4', name: 'Amara D.', color: '#a35d8a', weeklyXp: 2890 },
-  { id: 'lb-5', name: 'Leo T.', color: '#96762f', weeklyXp: 2310 },
-  { id: 'lb-6', name: 'Sofia R.', color: '#5d8a83', weeklyXp: 1760 },
-  { id: 'lb-7', name: 'Dev P.', color: '#c2703e', weeklyXp: 1250 },
-  { id: 'lb-8', name: 'Ivy C.', color: '#5b7fb0', weeklyXp: 840 },
-]

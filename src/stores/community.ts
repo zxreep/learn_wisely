@@ -1,122 +1,219 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { ChatMsg, Community, StudyRoom } from '../lib/types'
-import { uid } from '../lib/utils'
-import { seedCommunities, seedRooms, LEADERBOARD_PEOPLE } from '../lib/seed'
-import { useProgress } from './progress'
-import { useSync } from './sync'
-import { useSettings } from './settings'
+import type { ApiCommunity, ApiMessage, ApiPresence, ApiRoom, LeaderboardRow } from '../../shared/api'
+import { api, ApiError } from '../lib/api'
+import { isAuthed, useAuth } from './auth'
+import { useUi } from './ui'
+import { toast } from './toast'
 
-export { LEADERBOARD_PEOPLE }
+/**
+ * Server-backed social layer — every community, member, room, chat line and
+ * leaderboard row below comes from MongoDB via the Wisely API. No simulated
+ * data anywhere: an empty room is genuinely empty, a member is a real human.
+ * Guests can browse (read-only) and are prompted to sign in to participate.
+ */
 
-const CHATTER = [
-  'anyone else on pomodoro 3 tonight?',
-  'just finished ch. 7 flashcards 🎉',
-  'quick question — how do you annotate pdfs in here?',
-  'the 25/5 rhythm honestly works so well',
-  'reminder: past paper thread tomorrow at 6pm',
-  'switching to flashcards for my next block',
-  'good sprint everyone, break time ☕',
-  'day 9 of the streak, not breaking it now',
-  'posted my mitosis diagram in the resources tab',
-  'can someone explain chain rule like I’m five',
-  'earned the Deep Diver badge today!!',
-  'putting my phone in the other room, brb',
-]
-
-const CHATTERS = [
-  { who: 'Yuki', color: '#5b7fb0' },
-  { who: 'Amara', color: '#a35d8a' },
-  { who: 'Lena', color: '#3f7d58' },
-  { who: 'Raj', color: '#96762f' },
-  { who: 'Sofia', color: '#c2703e' },
-]
-
-const REPLIES = [
-  'nice work!',
-  'same here honestly',
-  'good luck 🔥',
-  'you’ve got this',
-  'solid plan',
-  '💪',
-]
-
-interface CommunityState {
-  communities: Community[]
-  rooms: StudyRoom[]
-  chats: Record<string, ChatMsg[]>
-
-  toggleJoinCommunity: (id: string) => void
-  toggleJoinRoom: (id: string) => void
-  sendMessage: (roomId: string, text: string) => void
-  receiveMessage: (roomId: string, msg: Omit<ChatMsg, 'id' | 'at'>) => void
+interface RoomCache {
+  messages: ApiMessage[]
+  presence: ApiPresence[]
+  lastMessageAt: number
+  loaded: boolean
 }
 
-export const useCommunity = create<CommunityState>()(
-  persist(
-    (set, get) => ({
-      communities: seedCommunities(),
-      rooms: seedRooms(),
-      chats: {
-        'room-library': [
-          { id: uid('msg'), who: 'Sofia', color: '#c2703e', text: '2 more sessions and I’m done with art history for the week', at: Date.now() - 840000 },
-          { id: uid('msg'), who: 'Ben', color: '#3f7d58', text: 'strong. I’m on problem sets until 10', at: Date.now() - 600000 },
-        ],
-      },
+interface CommunityState {
+  communities: ApiCommunity[]
+  rooms: ApiRoom[]
+  leaderboard: LeaderboardRow[]
+  loading: { communities: boolean; rooms: boolean; leaderboard: boolean }
+  unreachable: boolean
+  roomCache: Record<string, RoomCache>
 
-      toggleJoinCommunity: (id) => {
-        const c = get().communities.find((x) => x.id === id)
-        if (!c) return
-        const joining = !c.joined
-        set((s) => ({
-          communities: s.communities.map((x) =>
-            x.id === id
-              ? {
-                  ...x,
-                  joined: joining,
-                  members: x.members + (joining ? 1 : -1),
-                  activity: joining
-                    ? [{ who: 'You', what: 'joined the community', at: Date.now() }, ...x.activity].slice(0, 8)
-                    : x.activity,
-                }
-              : x,
-          ),
-        }))
-        if (joining) useProgress.getState().track('communities-joined', 1, { label: `Joined ${c.name}` })
-        useSync.getState().markDirty()
-      },
+  fetchCommunities: () => Promise<void>
+  fetchRooms: () => Promise<void>
+  fetchLeaderboard: () => Promise<void>
+  joinCommunity: (id: string) => Promise<void>
+  leaveCommunity: (id: string) => Promise<void>
 
-      toggleJoinRoom: (id) => {
-        set((s) => ({
-          rooms: s.rooms.map((r) => (r.id === id ? { ...r, joined: !r.joined } : r)),
-        }))
-        useSync.getState().markDirty()
-      },
+  enterRoom: (roomId: string) => Promise<void>
+  pollRoom: (roomId: string) => Promise<void>
+  sendMessage: (roomId: string, text: string) => Promise<void>
+  heartbeat: (roomId: string, p: { subject: string; focusing: boolean }) => Promise<void>
+  leaveRoomPresence: (roomId: string) => Promise<void>
+}
 
-      sendMessage: (roomId, text) => {
-        const msg: ChatMsg = { id: uid('msg'), who: useSettings.getState().name, color: '#7ebb97', text, at: Date.now(), self: true }
-        set((s) => ({ chats: { ...s.chats, [roomId]: [...(s.chats[roomId] ?? []), msg] } }))
-        // occasionally someone reacts after a moment
-        if (Math.random() < 0.85) {
-          const who = CHATTERS[Math.floor(Math.random() * CHATTERS.length)]
-          const reply = REPLIES[Math.floor(Math.random() * REPLIES.length)]
-          setTimeout(() => get().receiveMessage(roomId, { who: who.who, color: who.color, text: reply }), 1600 + Math.random() * 2400)
-        }
-        useSync.getState().markDirty()
-      },
+const emptyCache = (): RoomCache => ({ messages: [], presence: [], lastMessageAt: 0, loaded: false })
 
-      receiveMessage: (roomId, msg) => {
-        set((s) => ({
-          chats: { ...s.chats, [roomId]: [...(s.chats[roomId] ?? []), { ...msg, id: uid('msg'), at: Date.now() }] },
-        }))
-      },
-    }),
-    { name: 'wisely-community', version: 1 },
-  ),
-)
+async function guard<T>(fn: () => Promise<T>, set: (p: Partial<CommunityState>) => void, opts?: { quiet?: boolean }): Promise<T | null> {
+  try {
+    const out = await fn()
+    set({ unreachable: false })
+    return out
+  } catch (err) {
+    if (err instanceof ApiError && (err.code === 'network_error' || err.status >= 500)) {
+      set({ unreachable: true })
+      if (!opts?.quiet) toast.warn('Communities unreachable', 'The social server did not respond — your local work is safe.')
+    } else if (!opts?.quiet) {
+      toast.warn('Request failed', err instanceof Error ? err.message : 'Something went wrong')
+    }
+    return null
+  }
+}
 
-/** ambient chatter generator used by the room page */
-export function randomChatter(): { who: string; color: string; text: string } {
-  const who = CHATTERS[Math.floor(Math.random() * CHATTERS.length)]
-  return { who: who.who, color: who.color, text: CHATTER[Math.floor(Math.random() * CHATTER.length)] }
+function requireAuth(hint: string): boolean {
+  if (isAuthed()) return true
+  useUi.getState().openAuth(hint)
+  return false
+}
+
+export const useCommunity = create<CommunityState>()((set, get) => ({
+  communities: [],
+  rooms: [],
+  leaderboard: [],
+  loading: { communities: true, rooms: true, leaderboard: true },
+  unreachable: false,
+  roomCache: {},
+
+  fetchCommunities: async () => {
+    const out = await guard(() => api.communities(), set, { quiet: true })
+    if (out) set({ communities: out.communities, loading: { ...get().loading, communities: false } })
+    else set({ loading: { ...get().loading, communities: false } })
+  },
+
+  fetchRooms: async () => {
+    const out = await guard(() => api.rooms(), set, { quiet: true })
+    if (out) set({ rooms: out.rooms, loading: { ...get().loading, rooms: false } })
+    else set({ loading: { ...get().loading, rooms: false } })
+  },
+
+  fetchLeaderboard: async () => {
+    const out = await guard(() => api.leaderboard(), set, { quiet: true })
+    if (out) set({ leaderboard: out.leaderboard, loading: { ...get().loading, leaderboard: false } })
+    else set({ loading: { ...get().loading, leaderboard: false } })
+  },
+
+  joinCommunity: async (id) => {
+    if (!requireAuth('Sign in to join a community.')) return
+    const out = await guard(() => api.joinCommunity(id), set)
+    if (!out) return
+    const c = get().communities.find((x) => x.id === id)
+    toast.success(`Joined ${c?.name ?? 'community'}`, 'You now show up as a member.')
+    await get().fetchCommunities()
+    const progress = await import('./progress')
+    progress.useProgress.getState().track('communities-joined', 1, { label: `Joined ${c?.name ?? 'a community'}` })
+  },
+
+  leaveCommunity: async (id) => {
+    if (!requireAuth('Sign in to manage memberships.')) return
+    const c = get().communities.find((x) => x.id === id)
+    const out = await guard(() => api.leaveCommunity(id), set)
+    if (!out) return
+    toast.info(`Left ${c?.name ?? 'community'}`)
+    await get().fetchCommunities()
+  },
+
+  enterRoom: async (roomId) => {
+    const existing = get().roomCache[roomId]
+    if (!existing) set({ roomCache: { ...get().roomCache, [roomId]: emptyCache() } })
+    const [msgs, pres] = await Promise.all([
+      guard(() => api.messages(roomId), set, { quiet: true }),
+      guard(() => api.presence(roomId), set, { quiet: true }),
+    ])
+    const cache = get().roomCache[roomId] ?? emptyCache()
+    const messages = msgs ? msgs.messages.slice(-100) : cache.messages
+    set({
+      roomCache: {
+        ...get().roomCache,
+        [roomId]: {
+          messages,
+          presence: pres ? pres.presence : cache.presence,
+          lastMessageAt: messages.length ? messages[messages.length - 1].at : cache.lastMessageAt,
+          loaded: true,
+        },
+      },
+    })
+  },
+
+  pollRoom: async (roomId) => {
+    const cache = get().roomCache[roomId] ?? emptyCache()
+    const [msgs, pres] = await Promise.all([
+      cache.lastMessageAt ? guard(() => api.messages(roomId, cache.lastMessageAt), set, { quiet: true }) : Promise.resolve(null),
+      guard(() => api.presence(roomId), set, { quiet: true }),
+    ])
+    if (!msgs && !pres) return
+    const additions = msgs?.messages ?? []
+    const merged = [...cache.messages, ...additions].slice(-100)
+    set({
+      roomCache: {
+        ...get().roomCache,
+        [roomId]: {
+          messages: merged,
+          presence: pres ? pres.presence : cache.presence,
+          lastMessageAt: merged.length ? merged[merged.length - 1].at : cache.lastMessageAt,
+          loaded: true,
+        },
+      },
+    })
+  },
+
+  sendMessage: async (roomId, text) => {
+    if (!requireAuth('Sign in to chat in study rooms.')) return
+    try {
+      const { message } = await api.sendMessage(roomId, text)
+      const cache = get().roomCache[roomId] ?? emptyCache()
+      set({
+        roomCache: {
+          ...get().roomCache,
+          [roomId]: { ...cache, messages: [...cache.messages, message].slice(-100), lastMessageAt: message.at },
+        },
+      })
+    } catch (err) {
+      if (err instanceof ApiError && err.isAuth) return void useAuth.getState().refreshMe()
+      toast.warn('Message not sent', err instanceof Error ? err.message : 'Try again.')
+      throw err
+    }
+  },
+
+  heartbeat: async (roomId, p) => {
+    if (!isAuthed()) return
+    await guard(() => api.heartbeat(roomId, p), set, { quiet: true })
+  },
+
+  leaveRoomPresence: async (roomId) => {
+    if (!isAuthed()) return
+    await guard(() => api.leaveRoom(roomId), set, { quiet: true })
+  },
+}))
+
+/* ------------------------- polling + presence loops ---------------------- */
+let roomPollTimer: ReturnType<typeof setInterval> | null = null
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+let heartbeatRoom: string | null = null
+
+/** while a room detail page is open: pull new messages + presence */
+export function startRoomPolling(roomId: string) {
+  stopRoomPolling()
+  roomPollTimer = setInterval(() => void useCommunity.getState().pollRoom(roomId), 4_000)
+}
+
+export function stopRoomPolling() {
+  if (roomPollTimer) clearInterval(roomPollTimer)
+  roomPollTimer = null
+}
+
+/**
+ * Continuous presence while focusing: the room page calls this so peers see
+ * you for the duration of your session (server prunes you after ~90s silence).
+ */
+export function startHeartbeat(roomId: string, getState: () => { subject: string; focusing: boolean }) {
+  stopHeartbeat()
+  heartbeatRoom = roomId
+  const beat = () => void useCommunity.getState().heartbeat(roomId, getState())
+  beat()
+  heartbeatTimer = setInterval(beat, 30_000)
+}
+
+export function stopHeartbeat() {
+  if (heartbeatTimer) clearInterval(heartbeatTimer)
+  heartbeatTimer = null
+  if (heartbeatRoom) void useCommunity.getState().leaveRoomPresence(heartbeatRoom)
+  heartbeatRoom = null
 }

@@ -8,6 +8,14 @@ export default defineConfig({
     host: true, // bind 0.0.0.0 so the sandbox preview is reachable
     port: 5173,
     allowedHosts: true, // accept the e2b preview host
+    proxy: {
+      // browser code always calls same-origin /api/*; in dev we forward to
+      // the local Worker started with `npm run worker:dev`
+      '/api': {
+        target: 'http://localhost:8787',
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     host: true,

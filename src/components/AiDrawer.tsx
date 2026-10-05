@@ -6,10 +6,11 @@ import {
 import { useUi, type AiMode } from '../stores/ui'
 import { useLibrary, allDue } from '../stores/library'
 import { ask, explain, generateFlashcards, keyTerms, quizFromCards, summarize, type AskResult, type QuizQuestion } from '../lib/ai'
+import { pickCorpus, tryGroq, type Engine } from '../lib/aiEngine'
 import { Button, Chip, Input, Select } from './ui'
 import { QuizRunner } from './QuizRunner'
 import { toast } from '../stores/toast'
-import { cn, truncate } from '../lib/utils'
+import { cn, truncate, uid } from '../lib/utils'
 import { OwlMark } from './icons'
 
 const MODES: { id: AiMode; label: string }[] = [
@@ -57,7 +58,7 @@ export function AiDrawer() {
             onClick={closeAi}
           />
           <motion.aside
-            className="fixed right-0 top-0 bottom-0 z-[61] w-full sm:w-[430px] bg-surface border-l border-line shadow-pop flex flex-col"
+            className="fixed right-0 top-0 bottom-0 z-[61] w-full sm:w-[430px] glass-strong border-y-0 border-r-0 border-l border-line/40 flex flex-col"
             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             role="dialog"
@@ -70,7 +71,7 @@ export function AiDrawer() {
                 <div className="font-display font-semibold text-[15px] leading-tight flex items-center gap-1.5">
                   Ask Wisely <Sparkles className="w-3.5 h-3.5 text-accent2" />
                 </div>
-                <div className="text-[11px] text-ink3">On-device AI · works offline · reads only your library</div>
+                <div className="text-[11px] text-ink3">Groq AI when online · on-device fallback · grounded in your notes</div>
               </div>
               <button onClick={closeAi} className="ml-auto p-1.5 rounded-lg text-ink3 hover:bg-surface2" aria-label="Close">
                 <X className="w-4 h-4" />
@@ -121,17 +122,20 @@ export function AiDrawer() {
 function AskPane({ corpus }: { corpus: { title: string; content: string }[] }) {
   const [q, setQ] = useState('')
   const [thinking, setThinking] = useState(false)
-  const [result, setResult] = useState<AskResult | null>(null)
+  const [result, setResult] = useState<(AskResult & { engine: Engine }) | null>(null)
   const status = useThinking(thinking, 'ask')
 
-  const run = () => {
+  const run = async () => {
     if (!q.trim()) return
     setThinking(true)
     setResult(null)
-    setTimeout(() => {
-      setResult(ask(q, corpus))
-      setThinking(false)
-    }, 900)
+    const groq = await tryGroq({ mode: 'ask', query: q, corpus: pickCorpus(q, corpus) })
+    if (groq?.text) {
+      setResult({ answer: groq.text, sources: [], engine: 'groq' })
+    } else {
+      setResult({ ...ask(q, corpus), engine: 'on-device' })
+    }
+    setThinking(false)
   }
 
   return (
@@ -144,7 +148,7 @@ function AskPane({ corpus }: { corpus: { title: string; content: string }[] }) {
           placeholder="Ask anything about your notes…"
           autoFocus
         />
-        <Button onClick={run} disabled={!q.trim() || thinking} size="icon" aria-label="Ask">
+        <Button onClick={() => void run()} disabled={!q.trim() || thinking} size="icon" aria-label="Ask">
           <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
@@ -160,6 +164,7 @@ function AskPane({ corpus }: { corpus: { title: string; content: string }[] }) {
 
       {result && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+          <EngineBadge engine={result.engine} />
           <div className="rounded-2xl bg-surface2/60 border border-line/60 p-3.5 text-[13.5px] leading-relaxed whitespace-pre-line">
             {result.answer}
           </div>
@@ -183,7 +188,8 @@ function AskPane({ corpus }: { corpus: { title: string; content: string }[] }) {
 
       {!result && !thinking && (
         <div className="text-[12px] text-ink3 leading-relaxed px-1 pt-2">
-          I answer from <em>your</em> notes, not the internet — so nothing gets sent anywhere, and it works on a plane.
+          Online I use Groq with only the notes that match your question; offline I switch to a private on-device
+          engine. Either way, ready on a plane.
         </div>
       )}
     </div>
@@ -197,54 +203,53 @@ function SummarizePane() {
   const [noteId, setNoteId] = useState(ai.noteId ?? notes[0]?.id ?? '')
   const note = notes.find((n) => n.id === noteId)
   const [thinking, setThinking] = useState(false)
-  const [bullets, setBullets] = useState<string[] | null>(null)
+  const [summary, setSummary] = useState<{ text: string; engine: Engine } | null>(null)
   const status = useThinking(thinking, 'summarize')
 
   useEffect(() => {
     if (ai.noteId) setNoteId(ai.noteId)
   }, [ai.noteId])
 
-  const run = () => {
+  const run = async () => {
     if (!note) return
-    setThinking(true); setBullets(null)
-    setTimeout(() => {
-      setBullets(summarize(note.content))
-      setThinking(false)
-    }, 950)
+    setThinking(true); setSummary(null)
+    const groq = await tryGroq({ mode: 'summarize', note: { title: note.title, content: note.content } })
+    if (groq?.text) {
+      setSummary({ text: groq.text, engine: 'groq' })
+    } else {
+      setSummary({ text: summarize(note.content).map((b) => `- ${b}`).join('\n'), engine: 'on-device' })
+    }
+    setThinking(false)
   }
 
   const insert = () => {
-    if (!note || !bullets) return
-    const block = `## Summary (Wisely AI)\n${bullets.map((b) => `- ${b}`).join('\n')}\n\n---\n\n`
+    if (!note || !summary) return
+    const block = `## Summary (Wisely AI)\n${summary.text}\n\n---\n\n`
     updateNote(note.id, { content: block + note.content })
     toast.success('Summary inserted', 'Added to the top of your note.')
   }
 
   return (
     <div className="p-4 space-y-3">
-      <Select value={noteId} onChange={(e) => { setNoteId(e.target.value); setBullets(null) }} className="w-full">
+      <Select value={noteId} onChange={(e) => { setNoteId(e.target.value); setSummary(null) }} className="w-full">
         {notes.map((n) => <option key={n.id} value={n.id}>{n.title}</option>)}
       </Select>
 
       {!note && <Hint text="Create a note first, then come back." />}
-      {note && !bullets && !thinking && (
-        <Hint text={`Condense “${truncate(note.title, 40)}” into the ${Math.min(4, 5)} sentences that matter most.`} action={<Button size="sm" onClick={run}>Summarize</Button>} />
+      {note && !summary && !thinking && (
+        <Hint text={`Condense “${truncate(note.title, 40)}” into the sentences that matter most.`} action={<Button size="sm" onClick={() => void run()}>Summarize</Button>} />
       )}
       {thinking && <Thinking status={status} />}
-      {bullets && note && (
+      {summary && note && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-          <ul className="space-y-2">
-            {bullets.map((b, i) => (
-              <li key={i} className="flex gap-2.5 text-[13.5px] leading-relaxed">
-                <span className="font-display font-bold text-accent shrink-0">{i + 1}.</span>
-                {b}
-              </li>
-            ))}
-          </ul>
+          <EngineBadge engine={summary.engine} />
+          <div className="rounded-2xl border border-line/60 bg-surface2/40 p-3.5 text-[13.5px] leading-relaxed whitespace-pre-line">
+            {summary.text}
+          </div>
           <Terms text={note.content} />
           <div className="flex gap-2 pt-1">
             <Button size="sm" onClick={insert}><NotebookText className="w-3.5 h-3.5" /> Insert into note</Button>
-            <Button size="sm" variant="subtle" onClick={() => { navigator.clipboard.writeText(bullets.join('\n')); toast.success('Copied to clipboard') }}>
+            <Button size="sm" variant="subtle" onClick={() => { navigator.clipboard.writeText(summary.text); toast.success('Copied to clipboard') }}>
               <Copy className="w-3.5 h-3.5" /> Copy
             </Button>
           </div>
@@ -262,29 +267,32 @@ function FlashcardsPane() {
   const [deckId, setDeckId] = useState<string>('new')
   const note = notes.find((n) => n.id === noteId)
   const [thinking, setThinking] = useState(false)
-  const [gen, setGen] = useState<{ front: string; back: string }[] | null>(null)
+  const [gen, setGen] = useState<{ cards: { front: string; back: string }[]; engine: Engine } | null>(null)
   const status = useThinking(thinking, 'flashcards')
 
   useEffect(() => {
     if (ai.noteId) setNoteId(ai.noteId)
   }, [ai.noteId])
 
-  const run = () => {
+  const run = async () => {
     if (!note) return
     setThinking(true); setGen(null)
-    setTimeout(() => {
-      setGen(generateFlashcards(note.title, note.content))
-      setThinking(false)
-    }, 1100)
+    const groq = await tryGroq({ mode: 'flashcards', note: { title: note.title, content: note.content } })
+    if (groq?.cards?.length) {
+      setGen({ cards: groq.cards, engine: 'groq' })
+    } else {
+      setGen({ cards: generateFlashcards(note.title, note.content), engine: 'on-device' })
+    }
+    setThinking(false)
   }
 
   const commit = () => {
-    if (!gen || gen.length === 0) return
+    if (!gen || gen.cards.length === 0) return
     const target = deckId === 'new'
       ? createDeck(`${note!.title} — cards`, 'Generated by Wisely AI', '#7d8a4f')
       : deckId
-    addCards(target, gen)
-    toast.success(`${gen.length} flashcards added`, deckId === 'new' ? 'New deck created from your note.' : 'Added to the selected deck.')
+    addCards(target, gen.cards)
+    toast.success(`${gen.cards.length} flashcards added`, deckId === 'new' ? 'New deck created from your note.' : 'Added to the selected deck.')
     setGen(null)
   }
 
@@ -298,22 +306,23 @@ function FlashcardsPane() {
       {note && !gen && !thinking && (
         <Hint
           text="I’ll scan for definitions, dates and key terms, then draft cards you can review."
-          action={<Button size="sm" onClick={run}>Generate flashcards</Button>}
+          action={<Button size="sm" onClick={() => void run()}>Generate flashcards</Button>}
         />
       )}
       {thinking && <Thinking status={status} />}
       {gen && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-          {gen.length === 0 && <Hint text="Couldn’t find card-worthy sentences in this note — try a denser one." />}
+          <EngineBadge engine={gen.engine} />
+          {gen.cards.length === 0 && <Hint text="Couldn’t find card-worthy sentences in this note — try a denser one." />}
           <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-            {gen.map((c, i) => (
+            {gen.cards.map((c, i) => (
               <div key={i} className="rounded-xl border border-line/60 p-2.5 bg-surface">
                 <div className="text-[12.5px] font-semibold leading-snug">{c.front}</div>
                 <div className="text-[12px] text-ink2 mt-1 leading-snug">{truncate(c.back, 120)}</div>
               </div>
             ))}
           </div>
-          {gen.length > 0 && (
+          {gen.cards.length > 0 && (
             <div className="flex items-end gap-2 pt-1">
               <div className="flex-1">
                 <label className="text-[11px] font-semibold text-ink3 uppercase tracking-wide">Add to deck</label>
@@ -322,7 +331,7 @@ function FlashcardsPane() {
                   {decks.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
                 </Select>
               </div>
-              <Button size="sm" onClick={commit}><Check className="w-3.5 h-3.5" /> Add {gen.length}</Button>
+              <Button size="sm" onClick={commit}><Check className="w-3.5 h-3.5" /> Add {gen.cards.length}</Button>
             </div>
           )}
         </motion.div>
@@ -346,14 +355,21 @@ function QuizPane() {
     if (ai.deckId) setDeckId(ai.deckId)
   }, [ai.deckId])
 
-  const run = (dueOnly: boolean) => {
+  const run = async (dueOnly: boolean) => {
     if (!deck) return
     setThinking(true); setQuestions(null)
     const pool = dueOnly ? allDue(cards).filter((c) => c.deckId === deck.id) : cards.filter((c) => c.deckId === deck.id)
-    setTimeout(() => {
+    const groq = await tryGroq({
+      mode: 'quiz',
+      deckTitle: deck.title,
+      cards: pool.slice(0, 20).map((c) => ({ front: c.front, back: c.back })),
+    })
+    if (groq?.questions?.length) {
+      setQuestions(groq.questions.map((q) => ({ id: uid('q'), prompt: q.prompt, options: q.options, answer: q.answer, source: 'Groq AI' })))
+    } else {
       setQuestions(quizFromCards(pool, 6))
-      setThinking(false)
-    }, 800)
+    }
+    setThinking(false)
   }
 
   if (questions) {
@@ -377,8 +393,8 @@ function QuizPane() {
           text={`Multiple-choice from “${truncate(deck.title, 36)}” — distractors are other cards’ answers. ${dueCount > 0 ? `${dueCount} cards are due.` : ''}`}
           action={
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => run(false)}>Quiz me (6)</Button>
-              {dueCount >= 4 && <Button size="sm" variant="subtle" onClick={() => run(true)}>Due only</Button>}
+              <Button size="sm" onClick={() => void run(false)}>Quiz me (6)</Button>
+              {dueCount >= 4 && <Button size="sm" variant="subtle" onClick={() => void run(true)}>Due only</Button>}
             </div>
           }
         />
@@ -392,16 +408,19 @@ function QuizPane() {
 function ExplainPane({ corpus }: { corpus: { title: string; content: string }[] }) {
   const [term, setTerm] = useState('')
   const [thinking, setThinking] = useState(false)
-  const [out, setOut] = useState<string | null>(null)
+  const [out, setOut] = useState<{ text: string; engine: Engine } | null>(null)
   const status = useThinking(thinking, 'explain')
 
-  const run = () => {
+  const run = async () => {
     if (!term.trim()) return
     setThinking(true); setOut(null)
-    setTimeout(() => {
-      setOut(explain(term, corpus))
-      setThinking(false)
-    }, 800)
+    const groq = await tryGroq({ mode: 'explain', query: term, corpus: pickCorpus(term, corpus) })
+    if (groq?.text) {
+      setOut({ text: groq.text, engine: 'groq' })
+    } else {
+      setOut({ text: explain(term, corpus), engine: 'on-device' })
+    }
+    setThinking(false)
   }
 
   return (
@@ -414,7 +433,7 @@ function ExplainPane({ corpus }: { corpus: { title: string; content: string }[] 
           placeholder="A concept you keep forgetting… e.g. anaphase"
           autoFocus
         />
-        <Button onClick={run} disabled={!term.trim() || thinking} size="icon" aria-label="Explain">
+        <Button onClick={() => void run()} disabled={!term.trim() || thinking} size="icon" aria-label="Explain">
           <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
@@ -422,9 +441,12 @@ function ExplainPane({ corpus }: { corpus: { title: string; content: string }[] 
       {out && (
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-line/60 bg-surface2/60 p-3.5 text-[13.5px] leading-relaxed whitespace-pre-line"
+          className="space-y-2"
         >
-          {out}
+          <EngineBadge engine={out.engine} />
+          <div className="rounded-2xl border border-line/60 bg-surface2/60 p-3.5 text-[13.5px] leading-relaxed whitespace-pre-line">
+            {out.text}
+          </div>
         </motion.div>
       )}
       {!out && !thinking && (
@@ -438,6 +460,17 @@ function ExplainPane({ corpus }: { corpus: { title: string; content: string }[] 
 }
 
 /* --------------------------------- bits --------------------------------- */
+function EngineBadge({ engine }: { engine: Engine }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Chip color={engine === 'groq' ? '#5b4b8a' : '#4a8fa3'}>
+        <Sparkles className="w-3 h-3" />
+        {engine === 'groq' ? 'Groq · llama-3.3-70b' : 'On-device engine'}
+      </Chip>
+    </div>
+  )
+}
+
 function Thinking({ status }: { status: string }) {
   return (
     <div className="flex items-center gap-2.5 px-1 py-6 text-[13px] text-ink2">

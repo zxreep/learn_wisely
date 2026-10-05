@@ -1,37 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Cloud, Download, Eraser, HardDrive, Laptop, Moon, RefreshCw, Smartphone,
+  Cloud, Download, Eraser, HardDrive, Laptop, LogIn, LogOut, Moon, RefreshCw, Smartphone,
   Sun, SunMoon, Upload, Wifi, WifiOff,
 } from 'lucide-react'
-import { Avatar, Button, Card, Input, Page, PageHeader, SectionTitle, Switch } from '../components/ui'
+import { Avatar, Button, Card, Chip, Input, Page, PageHeader, SectionTitle, Switch } from '../components/ui'
 import { useSettings, type Theme } from '../stores/settings'
 import { useSync } from '../stores/sync'
+import { useAuth } from '../stores/auth'
+import { useUi } from '../stores/ui'
 import { toast } from '../stores/toast'
 import { download, cn, timeAgo } from '../lib/utils'
 import { OwlMark } from '../components/icons'
 
-const STORAGE_KEYS = ['wisely-settings', 'wisely-sync', 'wisely-progress', 'wisely-library', 'wisely-boards', 'wisely-focus', 'wisely-community']
+const STORAGE_KEYS = ['wisely-settings', 'wisely-sync', 'wisely-progress', 'wisely-library', 'wisely-boards', 'wisely-focus', 'wisely-community', 'wisely-auth']
+const PROFILE_COLORS = ['#2f7a57', '#1f3f7a', '#5b4b8a', '#8f3b2f', '#b0851f', '#4a8fa3']
 
 export default function Settings() {
   const { name, theme, dailyGoalMin, setName, setTheme, setDailyGoal } = useSettings()
   const sync = useSync()
+  const user = useAuth((s) => s.user)
 
   return (
     <Page className="max-w-[860px]">
       <PageHeader title="Settings" subtitle="Your workspace lives on this device first, clouds second." />
 
       <div className="space-y-4">
-        {/* profile */}
-        <Card className="p-5">
-          <SectionTitle title="Profile" />
-          <div className="flex items-center gap-4 mt-4">
-            <Avatar name={name || '?'} color="#2f6b4f" size={52} />
-            <div className="flex-1 max-w-xs">
-              <label className="text-[11px] font-semibold text-ink3 uppercase tracking-wide">Display name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" />
-            </div>
-          </div>
-        </Card>
+        {/* account */}
+        <AccountCard />
 
         {/* appearance */}
         <Card className="p-5">
@@ -87,15 +82,21 @@ export default function Settings() {
               <div>
                 <div className="text-[13px] font-semibold">{sync.online ? 'Online' : 'Offline'}</div>
                 <div className="text-[11.5px] text-ink3">
-                  {sync.syncing ? 'Syncing now…' : sync.pending > 0 ? `${sync.pending} changes queued` : `Synced ${sync.lastSyncedAt ? timeAgo(sync.lastSyncedAt) : 'never'}`}
+                  {!user
+                    ? 'Signed out — this device only'
+                    : sync.status === 'syncing'
+                      ? 'Syncing now…'
+                      : sync.pending > 0
+                        ? `${sync.pending} changes queued`
+                        : `Synced ${sync.lastSyncedAt ? timeAgo(sync.lastSyncedAt) : 'never'}`}
                 </div>
               </div>
               <Button
                 size="sm" variant="subtle" className="ml-auto"
-                disabled={!sync.online || sync.syncing}
+                disabled={!sync.online || sync.status === 'syncing' || !user}
                 onClick={() => void sync.syncNow()}
               >
-                <RefreshCw className={cn('w-3.5 h-3.5', sync.syncing && 'animate-spin')} /> Sync now
+                <RefreshCw className={cn('w-3.5 h-3.5', sync.status === 'syncing' && 'animate-spin')} /> Sync now
               </Button>
             </div>
             <div className="rounded-xl border border-line p-3.5 flex items-center gap-3">
@@ -113,11 +114,14 @@ export default function Settings() {
           </div>
           <div className="mt-3 rounded-xl bg-surface2/50 border border-line/60 p-3.5 text-[12.5px] text-ink2 leading-relaxed">
             <span className="font-semibold">Try it:</span> toggle your network off (or browser DevTools → offline). Everything — notes,
-            boards, focus sessions, AI — keeps working. The banner shows queued changes, and they flush the moment you reconnect,
-            just like multi-device sync will.
+            boards, focus sessions — keeps working locally. When you're back, queued changes push to this
+            account, and the newest copy wins across devices (last-write-wins).
           </div>
           <div className="flex items-center gap-2.5 mt-3 text-[12px] text-ink3">
-            <Smartphone className="w-4 h-4" /> Other devices show up here once sync is linked to an account (coming soon).
+            <Smartphone className="w-4 h-4" />
+            {user
+              ? `Other devices signed in as ${user.name} pull this workspace automatically after you push.`
+              : 'Sign in above and your workspace syncs to every device with the same account.'}
           </div>
         </Card>
 
@@ -131,15 +135,96 @@ export default function Settings() {
         <Card className="p-5 flex items-center gap-4">
           <OwlMark className="w-11 h-11" />
           <div>
-            <div className="font-display font-semibold">Wisely 0.1</div>
+            <div className="font-display font-semibold">Wisely 0.2</div>
             <div className="text-[12px] text-ink3 leading-snug mt-0.5">
-              A local-first study workspace. Notes, boards, flashcards, focus timers and an on-device AI that
-              never sends your words anywhere.
+              A local-first study workspace on Cloudflare + MongoDB + Groq. Notes, boards, flashcards and focus
+              timers live on this device; sync, communities, rooms and the leaderboard are real and server-backed.
             </div>
           </div>
         </Card>
       </div>
     </Page>
+  )
+}
+
+function AccountCard() {
+  const { user, logout, updateProfile } = useAuth()
+  const openAuth = useUi((s) => s.openAuth)
+  const sync = useSync()
+  const [editName, setEditName] = useState(user?.name ?? '')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (user) setEditName(user.name)
+  }, [user])
+
+  if (!user) {
+    return (
+      <Card className="p-5">
+        <SectionTitle
+          title="Account"
+          desc="Guests get the full local-first app. An account adds cloud sync, communities, rooms and the leaderboard."
+        />
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button onClick={() => openAuth('Sign in to unlock sync, rooms and the leaderboard.')}>
+            <LogIn className="w-4 h-4" /> Sign in / create account
+          </Button>
+          <Chip><Cloud className="w-3 h-3" /> MongoDB-backed</Chip>
+        </div>
+      </Card>
+    )
+  }
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await updateProfile({ name: editName.trim() || undefined })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <SectionTitle title="Account" desc="Used for sync, rooms, chat, communities and the leaderboard." />
+        <Chip color="#2f6b4f"><Cloud className="w-3 h-3" /> connected</Chip>
+      </div>
+      <div className="flex flex-wrap items-center gap-4 mt-4">
+        <Avatar name={user.name} color={user.color} size={52} />
+        <div className="flex-1 min-w-[220px] max-w-xs">
+          <label className="text-[11px] font-semibold text-ink3 uppercase tracking-wide">Display name</label>
+          <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="mt-1" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex gap-1.5">
+            {PROFILE_COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={() => void updateProfile({ color: c })}
+                className={cn('w-6 h-6 rounded-full transition-transform', user.color === c && 'scale-110 ring-2 ring-offset-2 ring-ink/30 dark:ring-offset-surface')}
+                style={{ backgroundColor: c }}
+                aria-label={`color ${c}`}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] text-ink3">Joined {timeAgo(user.joinedAt)}</span>
+        </div>
+        <div className="flex flex-col gap-2 ml-auto">
+          <Button size="sm" onClick={() => void save()} disabled={saving || !editName.trim() || editName.trim() === user.name}>
+            {saving ? 'Saving…' : 'Save profile'}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => logout()}>
+            <LogOut className="w-3.5 h-3.5" /> Sign out
+          </Button>
+        </div>
+      </div>
+      {sync.lastSyncedAt && (
+        <div className="mt-3 text-[11.5px] text-ink3 flex items-center gap-1.5">
+          <Cloud className="w-3 h-3 text-ok" /> Last cloud sync {timeAgo(sync.lastSyncedAt)} on {sync.deviceName}
+        </div>
+      )}
+    </Card>
   )
 }
 
