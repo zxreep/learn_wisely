@@ -1,0 +1,240 @@
+/* ============================================================
+   EMBERDESK — DESIGN TOKENS  (v3 · iOS system language)
+   ------------------------------------------------------------
+   The surface system is Apple's: a grouped grey canvas, white
+   cards floating on it, frosted chrome pinned to the edges, and
+   hairlines instead of shadows doing the separating work.
+   The single tint is GOLD — it carries every interactive and
+   every "this matters" signal. No other hue exists.
+   ============================================================ */
+/* Typeface: DM SANS (Google Fonts), self-hosted variable woff2 —
+   weights 100–1000 with the optical-size axis (9–40), so headings and
+   body automatically pick their optical cut. Roman + italic, latin
+   subset. Self-hosted rather than the CDN <link> so the font works
+   offline and inside sandboxed previews with no network. Apple-class
+   system faces stay behind it as fallbacks. */
+@font-face {
+  font-family: "DM Sans";
+  src: url("../fonts/dm-sans-latin.woff2") format("woff2");
+  font-weight: 100 1000;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DM Sans";
+  src: url("../fonts/dm-sans-italic-latin.woff2") format("woff2");
+  font-weight: 100 1000;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  /* ---------- Surfaces: LIGHT (iOS grouped background) ---------- */
+  --bg: #F2F2F7;                       /* systemGroupedBackground */
+  --bg-elevated: #FFFFFF;              /* cards, widgets, sheets */
+  --bg-sunken: rgba(118, 118, 128, 0.12);   /* systemFill — wells, inputs */
+  --bg-sunken-2: rgba(118, 118, 128, 0.20);
+  --bg-secondary: #FFFFFF;             /* secondaryGroupedBackground */
+
+  /* ---------- Ink: Apple's opacity ladder ---------- */
+  --ink: #000000;                            /* label — 100% */
+  --ink-muted: rgba(60, 60, 67, 0.60);       /* secondaryLabel — 60% */
+  --ink-faint: rgba(60, 60, 67, 0.40);       /* tertiaryLabel — 40% */
+  --ink-quaternary: rgba(60, 60, 67, 0.24);  /* quaternaryLabel */
+
+  /* ---------- Separators: 0.5px, always translucent ---------- */
+  --border: rgba(60, 60, 67, 0.18);
+  --border-strong: rgba(60, 60, 67, 0.29);   /* iOS separator */
+  --hairline: 0.5px;
+
+  --overlay: rgba(0, 0, 0, 0.40);
+
+  /* ---------- Frosted chrome ---------- */
+  --chrome-bg: rgba(255, 255, 255, 0.72);
+  --chrome-bg-strong: rgba(255, 255, 255, 0.86);
+  --blur-chrome: blur(25px) saturate(180%);
+
+  /* sticky-note tones: one neutral ramp by lightness, never hue */
+  --stick-yellow: #FFFFFF;
+  --stick-green: #FAFAFC;
+  --stick-blue: #F2F2F7;
+  --stick-pink: #EBEBF0;
+
+  /* ---------- GOLD: the only tint ---------- */
+  --gold: #C9A227;         /* fills, rules, dots, icons */
+  --gold-bright: #E3BE55;  /* hover on a gold fill */
+  --gold-deep: #8A6C10;    /* gold as TEXT — 4.9:1 on white */
+  --gold-soft: rgba(201, 162, 39, 0.12);
+  --gold-line: rgba(201, 162, 39, 0.42);
+  --gold-ink: #FFFFFF;        /* text sitting on a gold fill */
+  --gold-glow: 0 0 0 4px rgba(201, 162, 39, 0.18);
+
+  /* ---------- Legacy semantic names, remapped ----------
+       --ember → gold (reward)  ·  --moss / --focus-indigo /
+       --alert-coral → ink (structure; destructive is labelled,
+       never coloured)                                     */
+  --ember: var(--gold);
+  --ember-deep: var(--gold-deep);
+  --ember-soft: var(--gold-soft);
+  --ember-glow: var(--gold-glow);
+
+  --moss: var(--ink);
+  --moss-soft: var(--bg-sunken);
+  --focus-indigo: var(--ink);
+  --focus-indigo-soft: var(--bg-sunken);
+  --alert-coral: var(--ink);
+  --alert-coral-soft: var(--bg-sunken);
+
+  /* ---------- Typography: SF Pro Display, self-hosted ---------- */
+  --font-display: "DM Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: "DM Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-num: "DM Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* second-ticking readouts only (pomodoro/room timers): DM Sans ships no
+     `tnum` feature and its digits are proportional, so a per-second
+     countdown would wobble. These two use the platform face with real
+     tabular figures — SF Pro on Apple devices, uniform Helvetica-class
+     digits elsewhere. Everything else stays DM Sans. */
+  --font-num-fixed: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Golden-ratio (φ ≈ 1.618) modular type scale.
+     Each heading level is the one above divided by φ, so the
+     relationship between a title and its subheading is always φ. */
+  --phi: 1.618;
+  --type-h1: 2.125rem;                          /* 34 — screen title   */
+  --type-h2: calc(var(--type-h1) / var(--phi)); /* 21 — section head   */
+  --type-h3: calc(var(--type-h2) / var(--phi)); /* 13 — subheading     */
+
+  --text-xs: 0.75rem;    /* 12 — caption */
+  --text-sm: 0.8125rem;  /* 13 — footnote */
+  --text-base: 1.0625rem;/* 17 — body */
+  --text-md: 1.25rem;    /* 20 — title3 */
+  --text-lg: 1.375rem;   /* 22 — title2 */
+  --text-xl: 1.75rem;    /* 28 — title1 */
+  --text-2xl: 2.125rem;  /* 34 — largeTitle */
+  --text-3xl: 4.5rem;    /* the pomodoro face */
+
+  --leading-tight: 1.12;
+  --leading-snug: 1.3;
+  --leading-body: 1.5;
+  --measure: 70ch;
+
+  --track-label: 0.04em;
+
+  /* ---------- Spacing: 16px is the layout unit ---------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --pad: 16px;             /* every layout container */
+
+  /* ---------- Shape: strict 12 / 14, nothing larger ---------- */
+  --r-xs: 8px;     /* chips, tags, small affordances */
+  --r-sm: 10px;    /* inputs, segmented controls */
+  --r-md: 12px;    /* BUTTONS */
+  --r-lg: 14px;    /* CARDS */
+  --r-xl: 14px;    /* MODAL SHEETS — capped, deliberately equal */
+  --r-full: 999px;
+
+  /* ---------- Depth: hairlines first, then barely-there shadow ---------- */
+  --shadow-card: 0 4px 30px rgba(0, 0, 0, 0.03);
+  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.10);
+  --shadow-lift: 0 24px 64px rgba(0, 0, 0, 0.16);
+
+  /* ---------- Motion: Apple's fluid curve, never linear ---------- */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);          /* UIKit sheet/push curve — long tail, no bounce */
+  --ease-spring: cubic-bezier(0.36, 1.42, 0.44, 1);    /* iOS "spring" — settles with a soft overshoot */
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);          /* matches the iOS curve */
+  --ease-in-out: cubic-bezier(0.42, 0, 0.58, 1);
+  --dur-fast: 160ms;    /* press response */
+  --dur-med: 400ms;     /* sheet / view transitions */
+  --dur-slow: 520ms;
+  --dur-moment: 900ms;
+
+  /* ---------- Layout ---------- */
+  --sidebar-w: 232px;
+  --sidebar-w-collapsed: 64px;
+  --header-h: 52px;
+  --tabbar-h: 56px;
+  --board-bar-h: 46px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+/* ---------- DARK: true black canvas, #1C1C1E cards ---------- */
+[data-theme="dark"] {
+  --bg: #000000;
+  --bg-elevated: #1C1C1E;
+  --bg-secondary: #1C1C1E;
+  --bg-sunken: rgba(120, 120, 128, 0.24);
+  --bg-sunken-2: rgba(120, 120, 128, 0.34);
+
+  --ink: #FFFFFF;
+  --ink-muted: rgba(235, 235, 245, 0.60);
+  --ink-faint: rgba(235, 235, 245, 0.40);
+  --ink-quaternary: rgba(235, 235, 245, 0.24);
+
+  --border: rgba(84, 84, 88, 0.45);
+  --border-strong: rgba(84, 84, 88, 0.65);
+  --overlay: rgba(0, 0, 0, 0.60);
+
+  --chrome-bg: rgba(28, 28, 30, 0.72);
+  --chrome-bg-strong: rgba(28, 28, 30, 0.88);
+
+  --stick-yellow: #2C2C2E;
+  --stick-green: #242426;
+  --stick-blue: #1C1C1E;
+  --stick-pink: #171719;
+
+  --gold: #DDB63F;
+  --gold-bright: #F0CD6A;
+  --gold-deep: #DDB63F;    /* on black the bright gold already clears 8:1 */
+  --gold-soft: rgba(221, 182, 63, 0.16);
+  --gold-line: rgba(221, 182, 63, 0.45);
+  --gold-ink: #100C04;
+  --gold-glow: 0 0 0 4px rgba(221, 182, 63, 0.22);
+
+  --moss: var(--ink);
+  --moss-soft: var(--bg-sunken);
+  --focus-indigo: var(--ink);
+  --focus-indigo-soft: var(--bg-sunken);
+  --alert-coral: var(--ink);
+  --alert-coral-soft: var(--bg-sunken);
+
+  /* dark mode carries no diffuse shadow; the hairline does the work */
+  --shadow-card: none;
+  --shadow-pop: 0 16px 44px rgba(0, 0, 0, 0.60);
+  --shadow-lift: 0 24px 64px rgba(0, 0, 0, 0.72);
+}
+
+/* ---------- Text size setting (Profile > Controls) ---------- */
+[data-textsize="large"] { font-size: 112.5%; }
+[data-textsize="larger"] { font-size: 125%; }
+
+/* ---------- Dyslexia-friendly font setting ---------- */
+[data-dyslexic="on"] {
+  --font-body: "Verdana", "Trebuchet MS", sans-serif;
+  --font-display: "Verdana", "Trebuchet MS", sans-serif;
+  --track-label: 0.06em;
+  word-spacing: 0.12em;
+  line-height: 1.8;
+}
+
+/* ---------- Reduced motion: nothing is load-bearing ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

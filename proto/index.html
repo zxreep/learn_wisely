@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-motion="full" data-textsize="normal" data-dyslexic="off">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Emberdesk — your study board, quietly cheering you on</title>
+  <meta name="description" content="A study canvas, content library, communities, and a streak worth protecting — one connected desk for high school, college, and exam prep (JEE, NEET, UPSC, SAT, AP).">
+  <!-- The chrome takes its colour from the surface, in both modes -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F2F2F7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- No webfonts: the interface uses the platform's own typeface, so it
+       reads as native on every device and paints with zero font blocking. -->
+
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens.css">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='15' r='5.6' fill='%23C9A227' opacity='0.22'/%3E%3Cellipse cx='12' cy='15' rx='3' ry='3.6' fill='%23C9A227'/%3E%3Cellipse cx='12' cy='9.6' rx='3.4' ry='3.2' fill='%230B0B0A'/%3E%3C/svg%3E">
+</head>
+<body>
+  <noscript>
+    <p style="padding:24px;font-family:sans-serif">Emberdesk needs JavaScript to run the board, timers, and progress.</p>
+  </noscript>
+
+  <!-- boot skeleton (loading state) — ink uses currentColor so the
+       firefly is visible on the black canvas in dark mode too -->
+  <div class="boot" id="boot" role="status" aria-label="Loading Emberdesk">
+    <svg width="64" height="64" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--ink,#0B0B0A)">
+      <circle cx="12" cy="15" r="5.6" fill="#C9A227" opacity="0.22">
+        <animate attributeName="opacity" values="0.22;0.5;0.22" dur="1.6s" repeatCount="indefinite"/>
+      </circle>
+      <ellipse cx="12" cy="15" rx="3" ry="3.6" fill="#C9A227"/>
+      <ellipse cx="12" cy="9.6" rx="3.4" ry="3.2" fill="currentColor"/>
+      <path d="M8.4 7.6q-3.4-2.2-4.6-.4 3 .8 4.6 1.6zM15.6 7.6q3.4-2.2 4.6-.4-3 .8-4.6 1.6z" fill="currentColor" opacity="0.5"/>
+      <path d="M10.2 5.8q-.6-2-2.2-2.6M13.8 5.8q.6-2 2.2-2.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+    </svg>
+    <p class="boot-line">Lighting the lantern…</p>
+  </div>
+
+  <div class="app" id="app"></div>
+  <div class="toast-root" id="toast-root"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/onboarding.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/social.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
