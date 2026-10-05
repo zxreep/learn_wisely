@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+ * Wisely design tokens — warm "study desk" palette, light + dark.
+ * Values are space-separated RGB so Tailwind can apply <alpha-value>.
+ * ------------------------------------------------------------------------- */
+:root {
+  --c-bg: 245 241 233;
+  --c-surface: 252 250 245;
+  --c-surface2: 240 235 224;
+  --c-surface3: 233 227 214;
+  --c-ink: 28 25 20;
+  --c-ink2: 86 79 68;
+  --c-ink3: 143 135 120;
+  --c-line: 224 217 203;
+  --c-accent: 47 107 79;
+  --c-accent2: 196 110 22;
+  --c-ok: 46 125 86;
+  --c-warn: 183 126 23;
+  --c-danger: 183 62 46;
+  --c-violet: 110 88 160;
+  --code-bg: 239 234 223;
+}
+
+.dark {
+  --c-bg: 22 20 17;
+  --c-surface: 30 27 23;
+  --c-surface2: 38 35 29;
+  --c-surface3: 47 43 36;
+  --c-ink: 233 229 219;
+  --c-ink2: 170 162 148;
+  --c-ink3: 122 115 103;
+  --c-line: 54 50 42;
+  --c-accent: 126 187 151;
+  --c-accent2: 231 158 76;
+  --c-ok: 114 179 141;
+  --c-warn: 219 171 91;
+  --c-danger: 221 122 105;
+  --c-violet: 170 150 220;
+  --code-bg: 40 37 31;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  @apply bg-bg text-ink font-sans;
+  background-image:
+    radial-gradient(1200px 500px at 80% -10%, rgb(var(--c-accent) / 0.05), transparent 60%),
+    radial-gradient(900px 400px at -10% 110%, rgb(var(--c-accent2) / 0.05), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Selection + focus */
+::selection {
+  background: rgb(var(--c-accent) / 0.22);
+}
+:focus-visible {
+  outline: 2px solid rgb(var(--c-accent) / 0.65);
+  outline-offset: 2px;
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-ink3) / 0.4) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-ink3) / 0.35);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Fine paper texture for "paper" surfaces */
+.paper {
+  background-color: rgb(var(--c-surface));
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 27px,
+    rgb(var(--c-line) / 0.35) 27px,
+    rgb(var(--c-line) / 0.35) 28px
+  );
+}
+
+/* Ruled note editor */
+.note-editor:empty::before {
+  content: attr(data-placeholder);
+  color: rgb(var(--c-ink3));
+  pointer-events: none;
+}
+
+/* Drag and drop states */
+.drop-target {
+  outline: 2px dashed rgb(var(--c-accent) / 0.6);
+  outline-offset: -2px;
+  background: rgb(var(--c-accent) / 0.07);
+  border-radius: 0.75rem;
+}
+
+/* Flip card */
+.flip-scene {
+  perspective: 1200px;
+}
+.flip-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0.1, 0.2, 1);
+}
+.flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+
+/* Utility: hide scrollbars where wanted */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Marquee-ish ticker for rooms */
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Zen mode breathing ring */
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+.animate-breathe {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+/* Code/quote styling inside note rendering */
+.note-content h1,
+.note-content h2,
+.note-content h3 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+}
+.note-content h1 {
+  font-size: 1.35em;
+}
+.note-content h2 {
+  font-size: 1.18em;
+}
+.note-content ul,
+.note-content ol {
+  padding-left: 1.2em;
+  margin: 0.4em 0;
+}
+.note-content ul {
+  list-style: disc;
+}
+.note-content ol {
+  list-style: decimal;
+}
+.note-content code {
+  background: rgb(var(--code-bg));
+  padding: 0.1em 0.35em;
+  border-radius: 0.3em;
+  font-size: 0.88em;
+}
+.note-content mark {
+  background: rgb(var(--c-accent2) / 0.25);
+  color: inherit;
+  border-radius: 0.2em;
+  padding: 0 0.15em;
+}
+.note-content blockquote {
+  border-left: 3px solid rgb(var(--c-accent) / 0.5);
+  padding-left: 0.9em;
+  color: rgb(var(--c-ink2));
+  margin: 0.5em 0;
+}
