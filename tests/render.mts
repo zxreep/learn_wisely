@@ -84,7 +84,7 @@ const routes: { path: string; expect: string[] }[] = [
   { path: `/library?deck=${deckId}`, expect: ['Study', 'Add a card', 'Front'] },
   { path: '/focus', expect: ['Focus mode', 'Pomodoro', 'Soundscape', '25:00'] },
   { path: '/progress', expect: ['Progress', 'Quests', 'Badges', 'XP feed'] },
-  { path: '/discover', expect: ['Discover', 'Shared starter content'] },
+  { path: '/discover', expect: ['Discover', 'Curated study starter packs'] },
   { path: '/settings', expect: ['Settings', 'Account', 'Sync'] },
   { path: '/community', expect: ['Communities', 'Study rooms', 'Leaderboard'] },
   { path: '/no-such-page', expect: ['This page flew away'] },
