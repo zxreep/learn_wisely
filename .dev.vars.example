@@ -1,5 +1,0 @@
-# Local development secrets for `npm run worker:dev` — copy to .dev.vars (gitignored)
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/wisely?retryWrites=true&w=majority
-# If nodejs_compat TCP to Atlas causes trouble in your wrangler version, use the
-# standard (non-SRV) connection string: mongodb://host1:27017,host2:27017/wisely?ssl=true&replicaSet=...
-GROQ_API_KEY=gsk_your_key_here

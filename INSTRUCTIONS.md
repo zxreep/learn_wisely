@@ -1,11 +1,5 @@
 # Project Instructions
 
-## Agent memory first
-
-**Start by reading `MEMORY.md` at the repo root.** It is the maintained agent handoff file: current architecture (Cloudflare Worker + MongoDB Atlas + Groq), how to run and verify, secrets inventory, sync model, and every gotcha already solved. If you make structural changes, update `MEMORY.md` in the same change so the next agent stays current.
-
-Primary deployment target: **Cloudflare Workers (free tier)** — one `wrangler deploy` ships the API and the SPA (see §Cloudflare below). Supporting free-tier services: **MongoDB Atlas M0** (database) and **Groq** (server-side AI key). Non-negotiable rule: **no fake/simulated data anywhere** — communities, members, chat, presence and the leaderboard must always come from the real API/DB.
-
 ## Skills-first planning rule
 
 **Before making, changing, or deploying anything in this repository, check the `skills/` folder first and use the most relevant skill files to make a short plan.**
@@ -32,22 +26,19 @@ This keeps deployments lightweight and prevents reference-only files from being 
 
 ## Cloudflare Pages / Workers
 
-For Cloudflare, configure the project to publish only the build output directory. This repo deploys as a **full-stack Worker** (`worker/index.ts`): the API under `/api/*` and the built SPA from `dist/` as static assets with SPA fallback:
+For Cloudflare, configure the project to publish only the build output directory.
+
+Example `wrangler.jsonc` static assets configuration:
 
 ```jsonc
 {
   "name": "learn-wisely",
   "compatibility_date": "2026-10-05",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "worker/index.ts",
   "assets": {
-    "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "directory": "./dist"
   }
 }
 ```
-
-Secrets are provisioned with `wrangler secret put MONGODB_URI` / `wrangler secret put GROQ_API_KEY` — never commit them. Local worker dev uses `.dev.vars` (gitignored; template in `.dev.vars.example`).
 
 If the build process accidentally copies `skills/` into the assets directory, add an `.assetsignore` file inside the published assets directory, for example `dist/.assetsignore`:
 
