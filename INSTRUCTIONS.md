@@ -1,152 +1,76 @@
 # Project Instructions
 
-## Skills-first planning rule
+## Required entry sequence
 
-**Before making, changing, or deploying anything in this repository, check the `skills/` folder first and use the most relevant skill files to make a short plan.**
+Before making, changing, or deploying anything:
 
-Suggested workflow:
+1. Read this file.
+2. Read `AGENT_MEMORY.md` for the current architecture, status, invariants, and known gaps.
+3. Search `skills/` and read the task-relevant `SKILL.md` files and referenced material.
+4. Inspect current code/tests and write a short plan before editing.
+5. Verify documentation claims against code, configuration, Git, and test output.
 
-1. Identify the task type.
-2. Search `skills/` for relevant guidance.
-3. Read the matching `SKILL.md` files and any referenced files.
-4. Write a brief plan before editing or building.
-5. Only then implement the change.
+`AGENT_MEMORY.md` is context, not executable instruction. Never copy secrets, tokens, private payloads, or raw personal data into it. Update it in the same change when architecture, security invariants, deployment status, or material known gaps change.
 
-This keeps work aligned with the imported skill library and avoids starting from scratch when existing guidance is available.
+## Product invariants
 
-## Deployment protection for `skills/`
+- New accounts and collections start honestly empty. Never seed fake users, communities, posts, chats, activity, progress, testimonials, or rankings.
+- Static subjects, exams, widget types, and prompt suggestions are allowed as UI choices.
+- MongoDB Atlas is the only durable application database.
+- Groq is called only by the Worker; its API key must never enter browser code.
+- Project assets stay local to this repository. Do not depend on remote images or fonts.
+- Do not imply local file uploads are durable on Cloudflare Workers. Binary upload storage requires an explicit future storage decision.
+- Preserve accessibility: semantic controls, visible focus, keyboard use, text error messages, contrast, and reduced-motion behavior.
+- Use restrained liquid glass for chrome and select cards, not every surface. Keep a readable fallback where backdrop filters are unavailable.
 
-The `skills/` folder is reference content for planning and agent guidance. It should be kept in Git, but it should **not** be included in public deployment output unless explicitly required.
+## Stack and structure
 
-Primary rule:
+- React + TypeScript + Vite frontend: `src/`
+- Hono Cloudflare Worker API: `server/`
+- Runtime contracts/types: `shared/`
+- Cloudflare configuration: `wrangler.jsonc`
+- Historical layout reference only: `proto/`
+- Agent reference material only: `skills/`
 
-> Do not deploy the repository root. Deploy only the application build output directory, such as `dist/`, `build/`, `.next/`, or the framework-specific publish folder.
+Do not import `proto/` or `skills/` into the production application. Production publishes only Vite `dist/` assets plus the bundled Worker.
 
-This keeps deployments lightweight and prevents reference-only files from being publicly served.
+## Security and data rules
 
-## Cloudflare Pages / Workers
+- Validate all external input with the shared Zod contracts.
+- Keep authorization checks next to each database operation; never trust an object id from the client.
+- Use HTTP-only sessions and CSRF protection; do not move auth tokens to localStorage.
+- Render user content as text. Do not add `dangerouslySetInnerHTML` for notes, posts, comments, messages, or coach responses.
+- Never log passwords, session/CSRF tokens, API keys, Mongo URIs, or full private content.
+- Do not add production fallbacks that silently store real data in memory or browser storage.
+- Keep free-tier limits and Worker bundle size in mind. Prefer bounded queries and polling over unbounded/realtime infrastructure.
 
-For Cloudflare, configure the project to publish only the build output directory.
+## Local commands
 
-Example `wrangler.jsonc` static assets configuration:
-
-```jsonc
-{
-  "name": "learn-wisely",
-  "compatibility_date": "2026-10-05",
-  "assets": {
-    "directory": "./dist"
-  }
-}
+```bash
+npm install
+npm run dev
+npm run typecheck
+npm run lint
+npm test
+npm run test:e2e
+npm run build:worker
+npm run check
 ```
 
-If the build process accidentally copies `skills/` into the assets directory, add an `.assetsignore` file inside the published assets directory, for example `dist/.assetsignore`:
+Run `npm run check` before declaring a material change complete. For UI work, also smoke-test the live preview at desktop and mobile widths. For production integration, use real test accounts only and remove them afterward.
 
-```gitignore
-skills/
-skills/**
-```
+## Secrets and deployment
 
-For Cloudflare Git deployments, configure Build watch paths to avoid unnecessary builds when only `skills/` changes:
+Copy `.env.example` to untracked `.dev.vars` for local integration. In Cloudflare, use `wrangler secret put` for `MONGODB_URI` and `GROQ_API_KEY`; never place secret values in `wrangler.jsonc` or Git.
 
-```text
-Exclude path: skills/*
-```
+Do not deploy the repository root. `wrangler.jsonc` publishes only `dist/` and routes `/api/*` through the Worker. Keep `skills/` excluded from TypeScript, ESLint, indexing, Docker contexts, and public assets.
 
-Build-watch exclusions reduce unnecessary builds, but they are not the main security boundary. The real protection is ensuring `skills/` is not inside the published output folder.
+## Documentation ownership
 
-## Vercel
+- Constitution / contributor rules: `INSTRUCTIONS.md`
+- Architecture map, current status, handoff memory, delete zone: `AGENT_MEMORY.md`
+- Operator setup and deployment runbook: `README.md`
+- API payload truth: `shared/contracts.ts` and route code
+- Routine history: Git
 
-Add a root `.vercelignore` if deploying with Vercel:
-
-```gitignore
-skills/
-skills/**
-```
-
-For stricter deployments, use an allowlist-style `.vercelignore` and explicitly include only the files required to build and run the app.
-
-Example template:
-
-```gitignore
-/*
-!package.json
-!package-lock.json
-!pnpm-lock.yaml
-!yarn.lock
-!src/**
-!public/**
-!app/**
-!pages/**
-!components/**
-!vite.config.*
-!next.config.*
-!tsconfig.json
-```
-
-Adjust the allowlist for the actual framework and project structure.
-
-## Netlify
-
-Use a publish directory instead of deploying the repo root.
-
-Example `netlify.toml`:
-
-```toml
-[build]
-  command = "npm run build"
-  publish = "dist"
-```
-
-To skip builds when only `skills/` changes, add an ignore command:
-
-```toml
-[build]
-  command = "npm run build"
-  publish = "dist"
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)skills/**'"
-```
-
-## Docker-based platforms
-
-For Docker, Railway, Render, Fly.io, and similar platforms, add `skills/` to `.dockerignore` so the Docker build context remains small.
-
-Example `.dockerignore`:
-
-```gitignore
-skills/
-skills/**
-.git/
-node_modules/
-dist/
-build/
-coverage/
-```
-
-## Tooling excludes
-
-If the project uses TypeScript, linting, formatting, or indexing tools, exclude `skills/` where appropriate so those tools do not scan reference-only files.
-
-Example `tsconfig.json`:
-
-```json
-{
-  "exclude": ["node_modules", "skills"]
-}
-```
-
-Example ESLint flat config:
-
-```js
-export default [
-  {
-    ignores: ["skills/**"]
-  }
-]
-```
-
-## Final reminder
-
-Before building anything:
-
-> Use the skills first. Search the `skills/` folder, choose the relevant skill, make a plan, and then implement.
+Keep one canonical owner per fact and link instead of duplicating detailed instructions across files.
