@@ -1,0 +1,324 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+ * Wisely design tokens — warm "study desk" palette, light + dark.
+ * Values are space-separated RGB so Tailwind can apply <alpha-value>.
+ * ------------------------------------------------------------------------- */
+:root {
+  --c-bg: 245 241 233;
+  --c-surface: 252 250 245;
+  --c-surface2: 240 235 224;
+  --c-surface3: 233 227 214;
+  --c-ink: 28 25 20;
+  --c-ink2: 86 79 68;
+  --c-ink3: 143 135 120;
+  --c-line: 224 217 203;
+  --c-accent: 47 107 79;
+  --c-accent2: 196 110 22;
+  --c-ok: 46 125 86;
+  --c-warn: 183 126 23;
+  --c-danger: 183 62 46;
+  --c-violet: 110 88 160;
+  --code-bg: 239 234 223;
+}
+
+.dark {
+  --c-bg: 22 20 17;
+  --c-surface: 30 27 23;
+  --c-surface2: 38 35 29;
+  --c-surface3: 47 43 36;
+  --c-ink: 233 229 219;
+  --c-ink2: 170 162 148;
+  --c-ink3: 122 115 103;
+  --c-line: 54 50 42;
+  --c-accent: 126 187 151;
+  --c-accent2: 231 158 76;
+  --c-ok: 114 179 141;
+  --c-warn: 219 171 91;
+  --c-danger: 221 122 105;
+  --c-violet: 170 150 220;
+  --code-bg: 40 37 31;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  @apply bg-bg text-ink font-sans;
+  /* Mesh of soft aurora blobs behind everything — the glass layers refraction
+     targets (liquid-glass principle: glass needs colorful content behind it). */
+  background-image:
+    radial-gradient(1400px 800px at 85% -15%, rgb(var(--c-accent) / 0.14), transparent 55%),
+    radial-gradient(1100px 700px at -12% 25%, rgb(var(--c-accent2) / 0.11), transparent 55%),
+    radial-gradient(900px 640px at 45% 115%, rgb(var(--c-violet) / 0.11), transparent 55%);
+  background-attachment: fixed;
+}
+
+.dark body {
+  background-image:
+    radial-gradient(1400px 800px at 85% -15%, rgb(var(--c-accent) / 0.12), transparent 55%),
+    radial-gradient(1100px 700px at -12% 25%, rgb(var(--c-accent2) / 0.09), transparent 55%),
+    radial-gradient(900px 640px at 45% 115%, rgb(var(--c-violet) / 0.13), transparent 55%);
+}
+
+/* ---------------------------------------------------------------------------
+ * Liquid glass material — three tiers, translated from the
+ * skills/liquid-glass-design principles to the web:
+ *  - translucent blurred material over visible background content
+ *  - specular edge highlight (inset top hairline) + soft drop shadow
+ *  - reserved for chrome: nav, cards, modals, chips, controls
+ * ------------------------------------------------------------------------- */
+@layer components {
+  .glass {
+    background-color: rgb(var(--c-surface) / 0.55);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    backdrop-filter: blur(18px) saturate(1.6);
+    border: 1px solid rgb(255 255 255 / 0.5);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      0 10px 28px -14px rgb(var(--c-ink) / 0.18);
+  }
+  .dark .glass {
+    background-color: rgb(var(--c-surface) / 0.6);
+    border: 1px solid rgb(255 255 255 / 0.09);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.07),
+      0 12px 30px -14px rgb(0 0 0 / 0.65);
+  }
+
+  .glass-strong {
+    background-color: rgb(var(--c-surface) / 0.72);
+    -webkit-backdrop-filter: blur(28px) saturate(1.7);
+    backdrop-filter: blur(28px) saturate(1.7);
+    border: 1px solid rgb(255 255 255 / 0.55);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.6),
+      0 18px 48px -18px rgb(var(--c-ink) / 0.28);
+  }
+  .dark .glass-strong {
+    background-color: rgb(var(--c-surface) / 0.78);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 20px 50px -18px rgb(0 0 0 / 0.7);
+  }
+
+  .glass-subtle {
+    background-color: rgb(var(--c-surface) / 0.42);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    backdrop-filter: blur(12px) saturate(1.4);
+    border: 1px solid rgb(255 255 255 / 0.4);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4);
+  }
+  .dark .glass-subtle {
+    background-color: rgb(var(--c-surface) / 0.5);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+
+  .glass-input {
+    background-color: rgb(var(--c-surface) / 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .dark .glass-input {
+    background-color: rgb(var(--c-bg) / 0.45);
+  }
+
+  /* Tinted glass tile (icon chips etc.) — set --tint to a hex color */
+  .glass-tint {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(var(--c-surface) / 0.5);
+    border: 1px solid rgb(255 255 255 / 0.45);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45);
+  }
+  .glass-tint::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--tint, #2f6b4f) 18%, transparent), transparent 70%);
+    pointer-events: none;
+  }
+  .dark .glass-tint {
+    background-color: rgb(var(--c-surface) / 0.55);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+}
+
+/* Graceful degradation: no backdrop-filter → opaque surfaces, design intact */
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .glass,
+  .glass-strong,
+  .glass-subtle,
+  .glass-input,
+  .glass-tint {
+    background-color: rgb(var(--c-surface));
+    box-shadow: 0 1px 2px rgb(var(--c-ink) / 0.06), 0 8px 24px -12px rgb(var(--c-ink) / 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Selection + focus */
+::selection {
+  background: rgb(var(--c-accent) / 0.22);
+}
+:focus-visible {
+  outline: 2px solid rgb(var(--c-accent) / 0.65);
+  outline-offset: 2px;
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-ink3) / 0.4) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-ink3) / 0.35);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Fine paper texture for "paper" surfaces */
+.paper {
+  background-color: rgb(var(--c-surface));
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 27px,
+    rgb(var(--c-line) / 0.35) 27px,
+    rgb(var(--c-line) / 0.35) 28px
+  );
+}
+
+/* Ruled note editor */
+.note-editor:empty::before {
+  content: attr(data-placeholder);
+  color: rgb(var(--c-ink3));
+  pointer-events: none;
+}
+
+/* Drag and drop states */
+.drop-target {
+  outline: 2px dashed rgb(var(--c-accent) / 0.6);
+  outline-offset: -2px;
+  background: rgb(var(--c-accent) / 0.07);
+  border-radius: 0.75rem;
+}
+
+/* Flip card */
+.flip-scene {
+  perspective: 1200px;
+}
+.flip-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0.1, 0.2, 1);
+}
+.flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+
+/* Utility: hide scrollbars where wanted */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Marquee-ish ticker for rooms */
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Zen mode breathing ring */
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+.animate-breathe {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+/* Code/quote styling inside note rendering */
+.note-content h1,
+.note-content h2,
+.note-content h3 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+}
+.note-content h1 {
+  font-size: 1.35em;
+}
+.note-content h2 {
+  font-size: 1.18em;
+}
+.note-content ul,
+.note-content ol {
+  padding-left: 1.2em;
+  margin: 0.4em 0;
+}
+.note-content ul {
+  list-style: disc;
+}
+.note-content ol {
+  list-style: decimal;
+}
+.note-content code {
+  background: rgb(var(--code-bg));
+  padding: 0.1em 0.35em;
+  border-radius: 0.3em;
+  font-size: 0.88em;
+}
+.note-content mark {
+  background: rgb(var(--c-accent2) / 0.25);
+  color: inherit;
+  border-radius: 0.2em;
+  padding: 0 0.15em;
+}
+.note-content blockquote {
+  border-left: 3px solid rgb(var(--c-accent) / 0.5);
+  padding-left: 0.9em;
+  color: rgb(var(--c-ink2));
+  margin: 0.5em 0;
+}

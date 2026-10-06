@@ -1,0 +1,7 @@
+skills/
+skills/**
+.git/
+node_modules/
+dist/
+build/
+coverage/

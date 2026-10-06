@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "learn-wisely",
+  "compatibility_date": "2026-10-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "worker/index.ts",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+  },
+  "vars": {
+    "MONGODB_DB": "wisely",
+    "GROQ_MODEL": "llama-3.3-70b-versatile",
+    "AI_RATE_PER_HOUR": "30",
+  },
+  // Secrets are set with:  wrangler secret put MONGODB_URI
+  //                        wrangler secret put GROQ_API_KEY
+  // See MEMORY.md for the full setup walkthrough.
+}
